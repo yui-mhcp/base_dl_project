@@ -92,8 +92,8 @@ Furthermore, they are all `Singleton` so you can instanciate them multiple times
 
 | Classes   | Dataset   | Architecture  | Trainer   | Weights   |
 | :-------: | :-------: | :-----------: | :-------: | :-------: |
-| 10        | [Fashion MNIST](https://www.tensorflow.org/datasets/catalog/fashion_mnist) | `BaseClassifier`  | [me](https://github.com/yui-mhcp) | [Google Drive](https://drive.google.com/drive/folders/1w8v-WbIqgFdsKurWfSLUAzY9xEvbPpVV?usp=sharing)  |
-| 10        | [MNIST](https://deepai.org/dataset/mnist) | `BaseClassifier`  | [me](https://github.com/yui-mhcp) | [Google Drive](https://drive.google.com/drive/folders/1pfBSpTVVtiNeXwAereZq7tv-lXTE_CXG?usp=sharing)  |
+| 10        | [Fashion MNIST](https://www.tensorflow.org/datasets/catalog/fashion_mnist) | `BaseClassifier`  | [me](https://github.com/yui-mhcp) | [Google Drive](https://drive.google.com/file/d/1HNquUe648lJT3ATdSVN9Alx4I3MmRoze/view?usp=sharing)  |
+| 10        | [MNIST](https://deepai.org/dataset/mnist) | `BaseClassifier`  | [me](https://github.com/yui-mhcp) | [Google Drive](https://drive.google.com/file/d/1v6Bh3ZyWck4cBujsQU3SaYTIHGiE0nal/view?usp=sharing)  |
 
 Models must be unzipped in the `pretrained_models/` directory !
 
@@ -145,6 +145,9 @@ To know the annotation-style required for each function you can see their docume
 
 - **Text datasets** :
     - [Europarl](https://www.statmt.org/europarl/) dataset : multiple corpus of datasets for translations. 
+    - [The Stanford Natural Language Inference (SNLI) Corpus](https://nlp.stanford.edu/projects/snli/) : dataset for sentence meaning comparison.
+    - [SQuAD 2.0](https://rajpurkar.github.io/SQuAD-explorer/) : Question-Answering dataset
+    - [Semantic Text Similarity (STS) benchmark](http://ixa2.si.ehu.eus/stswiki/index.php/STSbenchmark) : score the semantic similarity of 2 sentences. 
 
 All `tensorflow / keras` datasets are also supported by the `get_dataset()` method. 
 
@@ -321,6 +324,9 @@ Datasets :
 - Essex dataset :  dataset for face comparison (not found the link anymore...). 
 - [Wider Face](http://shuoyang1213.me/WIDERFACE/) dataset : really good dataset for face detection in many different context, sizes and difficulties. 
 - [Europarl](https://www.statmt.org/europarl/) dataset : multiple corpus of datasets for translations. 
+- [The Stanford Natural Language Inference (SNLI) Corpus](https://nlp.stanford.edu/projects/snli/) : dataset for sentence meaning comparison.
+- [SQuAD 2.0](https://rajpurkar.github.io/SQuAD-explorer/) : Question-Answering dataset
+- [Semantic Text Similarity (STS) benchmark](http://ixa2.si.ehu.eus/stswiki/index.php/STSbenchmark) : score the semantic similarity of 2 sentences. 
 
 Citations : 
 ```

@@ -3,7 +3,7 @@ pytube3
 umap_learn
 Unidecode
 noisereduce
-tensorflow==2.3.2
+tensorflow
 tensorflow_datasets
 moviepy
 tqdm
