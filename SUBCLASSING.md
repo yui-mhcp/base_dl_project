@@ -1,4 +1,4 @@
-# Create a new project
+# :yum: Create a new project
 
 ## Structure of a model folder
 

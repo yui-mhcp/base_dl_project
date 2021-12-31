@@ -1,6 +1,6 @@
 # :yum: Base Deep Learning project
 
-The objective of this repository is to provide a base project with the `BaseModel` class which allows to create new powerful and usable projects much faster. 
+The objective of this repository is to provide a base project with the `BaseModel` class allowing you to create new powerful and usable projects much faster !
 
 Furthermore, all other projects (such as [Text-To-Speech](https://github.com/yui-mhcp/text_to_speech), [Speech-To-Text](https://github.com/yui-mhcp/speech_to_text), [Siamese Networks](https://github.com/yui-mhcp/siamese_networks), ...) are completely based on the `BaseModel` class. 
 
@@ -22,16 +22,18 @@ For instance, the `TacotronLoss` will be provided in the [tts](https://github.co
 ├── datasets/               : utilities for dataset loading / processing
 │   ├── custom_datasets/    : where to save custom datasets processing
 ├── hparams/                : utility class to define modulable hyper-parameters
+├── loggers/                : some logging utilities
 ├── models/                 : main `BaseModel` subclasses directory
 │   ├── classification/     : directory for `BaseClassifier` classes
 ├── pretrained_models/      : saving directory for pretrained models
+├── unitest/                : custom unitest framework to test models' consistency
 └── utils/                  : utilities for data processing
 
 ```
 
-See [my data_processing repository](https://github.com/yui-mhcp/data_processing) for more information on the `utils` module and `data processing` features.
+See [my data_processing repository](https://github.com/yui-mhcp/data_processing) for more information on the `utils` module and `data processing` features as well as `loggers` and `unitest`.
 
-All projects also contains a `README.md` file giving general information on the project features / usage and some `example_*.jpynb` notebooks for practical usage examples. 
+All projects also contain a `README.md` file giving general information on the project's features / usage, some links (tutorials / projects) related to the topic and some `example_*.jpynb` notebooks for practical usage examples. 
 
 ## Available features
 
@@ -104,6 +106,8 @@ Models must be unzipped in the `pretrained_models/` directory !
 3. Install requirements : `pip install -r requirements.txt`
 4. Open an example notebook and follow the instructions !
 
+**For audio processing** : you should also install `ffmpeg` if you want to use some audio processing functions.
+
 ## TO-DO list
 
 - [x] Make the TO-DO list.
@@ -111,13 +115,14 @@ Models must be unzipped in the `pretrained_models/` directory !
 - [x] Make examples for `BaseModel` subclassing.
 - [x] Comment the `BaseModel` methods.
 - [x] Comment the code.
-- [ ] Allow to call `test` with other metrics than the default ones.
-- [ ] Allow to call `test` multiple times in the same epoch and save all testings without overriding previous testing information.
+- [x] Multi-GPU support.
+- [x] Allow to call `test` with other metrics than the default ones.
+- [x] Allow to call `test` multiple times in the same epoch and save all testings without overriding previous testing information.
 
 ### Future improvments
 
 - [x] Clean some parts of the code (non audio datasets / `current_blocks.py` / `simple_models.py`) (perfectly working but quite too big). 
-- [ ] Add a model comparator to facilitate comparison between models architectures, training procedure and their resulting metrics. 
+- [x] Add a model comparator to facilitate comparison between models architectures, training procedure and their resulting metrics. 
 - [x] Clean up image / text datasets processing and add new ones. 
 - [x] Improve datasets processing to make them faster with the `ThreadPool` utility (from `utils/thread_utils.py`). 
 - [ ] Improve the `BaseModel` class to allow new useful features (to be determined).

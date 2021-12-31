@@ -4,7 +4,7 @@ import tensorflow as tf
 
 from models.base_model import BaseModel
 from utils import plot_multiple, plot_embedding
-from utils.image import display_image, build_gif
+from utils.image import display_image, build_gif, load_image
 
 class BaseClassifier(BaseModel):
     def __init__(self,
@@ -78,10 +78,11 @@ class BaseClassifier(BaseModel):
         kwargs.setdefault('loss', loss)
         kwargs.setdefault('metrics', [metric])
         
-        super().compile(**kwargs)
+        super().compile(** kwargs)
     
     def preprocess_data(self, data):
-        return tf.cast(data['image'], tf.float32) / 255., tf.cast(data['label'], tf.int32)
+        image = load_image(data['image'], target_shape = self.input_size, dtype = tf.float32)
+        return image, tf.cast(data['label'], tf.int32)
     
     def _get_train_config(self, * args, test_size = 1, test_batch_size = 256, ** kwargs):
         return super()._get_train_config(
@@ -149,8 +150,8 @@ class BaseClassifier(BaseModel):
         datas = tf.cast(datas, tf.float32)
         if tf.reduce_max(datas) > 1.:
             datas = datas / 255.
-        if tf.rank(datas) == 2: datas = tf.expand_dims(datas, axis = -1)
-        if tf.rank(datas) == 3: datas = tf.expand_dims(datas, axis = 0)
+        if len(tf.shape(datas)) == 2: datas = tf.expand_dims(datas, axis = -1)
+        if len(tf.shape(datas)) == 3: datas = tf.expand_dims(datas, axis = 0)
         pred = self(datas, training = False)
         
         pred_class = tf.argmax(pred, axis = -1)
