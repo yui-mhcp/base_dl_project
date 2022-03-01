@@ -124,9 +124,13 @@ Models must be unzipped in the `pretrained_models/` directory !
 - [x] Clean some parts of the code (non audio datasets / `current_blocks.py` / `simple_models.py`) (perfectly working but quite too big). 
 - [x] Add a model comparator to facilitate comparison between models architectures, training procedure and their resulting metrics. 
 - [x] Clean up image / text datasets processing and add new ones. 
-- [x] Improve datasets processing to make them faster with the `ThreadPool` utility (from `utils/thread_utils.py`). 
+- [x] Improve datasets processing to make them faster with the `ThreadedQueue` utility (from `utils/thread_utils.py`). 
+- [x] Add `Transformers` support\*.
 - [ ] Improve the `BaseModel` class to allow new useful features (to be determined).
 - [ ] Add new datasets support.
+
+\* My objective is clearly **not** to copy or make better than the [transformers](https://github.com/huggingface/transformers) library. `Transformers` is a manly used architecture so it is important to add their support for NLP-based topics. Furthermore, my implementation is compatible with the `transformers`' checkpoints but the way they are implemented is completely different : in my approach, all models are based on the same blocks (MHA / TransformerLayer) while in `transformers`, each model has its own implementation of every sub-block.
+
 
 ## Supported datasets
 
@@ -294,9 +298,13 @@ You can contact [me](https://github.com/yui-mhcp) at yui-mhcp@tutanota.com or on
 The objective of these projects is to facilitate the development and deployment of useful application using Deep Learning for solving real-world problems and helping people. 
 For this purpose, all the code is under the [Affero GPL (AGPL) v3 licence](LICENCE)
 
-Furthermore, you **cannot** use any of these projects for commercial purpose without my permission. You can use, modify, distribute and use any of my projects for production as long as you respect the terms of the [licence](LICENCE) and use it for non-commercial purposes (i.e. free applications / research). 
+All my projects are "free software", meaning that you can use, modify, deploy and distribute them on a free basis, in compliance with the Licence. They are not in the public domain and are copyrighted, there exist some conditions on the distribution but their objective is to make sure that everyone is able to use and share any modified version of these projects. 
 
-If you use this project in your work, please cite this project to give it more visibility ! :smile:
+Furthermore, if you want to use any project in a closed-source project, or in a commercial project, you will need to obtain another Licence. Please contact me for more information. 
+
+For my protection, it is important to note that all projects are available on an "As Is" basis, without any warranties or conditions of any kind, either explicit or implied. However, do not hesitate to report issues on the repository's project or make a Pull Request to solve it :smile: 
+
+If you use this project in your work, please add this citation to give it more visibility ! :yum:
 
 ```
 @misc{yui-mhcp
@@ -307,6 +315,10 @@ If you use this project in your work, please cite this project to give it more v
     howpublished    = {\url{https://github.com/yui-mhcp}}
 }
 ```
+
+## Acknowledgments
+
+Thanks to @Ananas120 for his contribution and sharing his implementation of `Transformers` architectures. 
 
 ## Notes and references
 
