@@ -1,10 +1,10 @@
 # :yum: Base Deep Learning project
 
-The objective of this repository is to provide a base project with the `BaseModel` class allowing you to create new powerful and usable projects much faster !
+The objective of this repository is to provide a base project with the `BaseModel` class with some powerful interfaces, to allow you to create new powerful and usable projects much faster !
 
 Furthermore, all other projects (such as [Text-To-Speech](https://github.com/yui-mhcp/text_to_speech), [Speech-To-Text](https://github.com/yui-mhcp/speech_to_text), [Siamese Networks](https://github.com/yui-mhcp/siamese_networks), ...) are completely based on the `BaseModel` class. 
 
-Note : I provide a `BaseClassifier` class as example in order to illustrate how to subclass `BaseModel` to create a `MNIST` classifier. However, this is a really simple implementation for the `MNIST` dataset : I will later create a real `classification` repository for more advanced classification (images, text, multi-labels, ...).
+Note : I provide a `BaseClassifier` class as example, in order to illustrate how to subclass `BaseModel` to create a `MNIST` classifier. However, this is a really simple implementation for the `MNIST` dataset : I will later create a real `classification` repository for more advanced classification (images, text, multi-labels, ...).
 
 Note 2 : this project tends to be as generic as possible. It is the reason why I do not provide specific architectures / generators as they are project-specific.
 For instance, the `TacotronLoss` will be provided in the [tts](https://github.com/yui-mhcp/text_to_speech) project with the `Tacotron2` model / architecture.
@@ -13,6 +13,7 @@ For instance, the `TacotronLoss` will be provided in the [tts](https://github.co
 
 ```bash
 ├── custom_architectures/   : custom architectures
+│   ├── transformers_arch/  : specific blocks for Transformers (BERT / BART / GPT-2 / ...)
 ├── custom_layers/          : custom layers
 ├── custom_train_objects/   : custom objects for training
 │   ├── callbacks/          : custom callbacks
@@ -25,15 +26,18 @@ For instance, the `TacotronLoss` will be provided in the [tts](https://github.co
 ├── loggers/                : some logging utilities
 ├── models/                 : main `BaseModel` subclasses directory
 │   ├── classification/     : directory for `BaseClassifier` classes
+│   ├── interfaces/         : directory for `BaseModel` class and useful interfaces\*
 ├── pretrained_models/      : saving directory for pretrained models
 ├── unitest/                : custom unitest framework to test models' consistency
 └── utils/                  : utilities for data processing
 
 ```
 
-See [my data_processing repository](https://github.com/yui-mhcp/data_processing) for more information on the `utils` module and `data processing` features as well as `loggers` and `unitest`.
+See [my data_processing repository](https://github.com/yui-mhcp/data_processing) for more information on the `utils` module and `data processing` features, as well as `loggers` and `unitest`.
 
 All projects also contain a `README.md` file giving general information on the project's features / usage, some links (tutorials / projects) related to the topic and some `example_*.jpynb` notebooks for practical usage examples. 
+
+\* The *interfaces* are specific classes for text, audio and image-related models, providing many useful methods for data loading and processing. 
 
 ## Available features
 
@@ -103,10 +107,12 @@ Models must be unzipped in the `pretrained_models/` directory !
 
 1. Clone this repository : `git clone https://github.com/yui-mhcp/base_dl_project.git`
 2. Go to the root of this repository : `cd base_dl_project`
-3. Install requirements : `pip install -r requirements.txt`
+3. Install requirements\* : `pip install -r requirements.txt`
 4. Open an example notebook and follow the instructions !
 
 **For audio processing** : you should also install `ffmpeg` if you want to use some audio processing functions.
+
+\* Some requirements are specific to functions (such as `noisereduce` is specific for noise reduction). Therefore I have put some requirements aside with the associated function : you can simply remove them if you do not want to use the function. The library is imported inside the function so that it will not raise any error ;)
 
 ## TO-DO list
 

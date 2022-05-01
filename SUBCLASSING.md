@@ -24,6 +24,8 @@ pretrained_models/mnist_classifier/ : the main directory of your model
 
 I will not show an example of subclassing here (you can check the [BaseClassifier](models/classification/base_classifier.py) example for that) but will describe the principal methods you can define / override.
 
+If you want to subclass for a specific topic (image / text / audio), I suggest you to check other repositories related to this topic and their main class : the available interfaces give many utilities to process these kind of data. 
+
 ### Properties
 
 #### Main properties

@@ -14,7 +14,7 @@ import os
 import math
 import tensorflow as tf
 
-from models.base_model import BaseModel
+from models.interfaces import BaseModel
 from utils import plot_multiple, plot_embedding
 from utils.image import display_image, build_gif, load_image
 
