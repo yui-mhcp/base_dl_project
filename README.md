@@ -295,7 +295,7 @@ Another example for a loss is the `TacotronLoss` which returns the full loss but
 
 You can specify the `metric_names` property in metrics or `loss_names` in loss that returns the names of metrics returned.
 
-**Warning** that this feature is only usable with the `train` method and not the `fit` one. The default behaviour in `tensorflow` is to have 1 loss / metric class per value so that all different metrics will be considered as identical (for the `EER` you will have `EER, AUC` with `train` but `EER and EER` with `fit`).
+**Warning** : this feature is only usable with the `train` method and not the `fit` one. The default behaviour in `tensorflow` is to have 1 loss / metric class per value so that all different metrics will be considered as identical (for the `EER` you will have `EER, AUC` with `train` but `EER and EER` with `fit`).
 
 ## Contacts and licence
 

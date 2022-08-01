@@ -13,7 +13,8 @@
 import os
 import glob
 
-from models.model_utils import _pretrained_models_folder, infer_model_class
+from models.model_utils import *
+from models.model_utils import _pretrained_models_folder
 from utils.generic_utils import get_object, print_objects
 
 def __load():
