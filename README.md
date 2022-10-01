@@ -1,6 +1,6 @@
 # :yum: Base Deep Learning project
 
-The objective of this repository is to provide a base project with the `BaseModel` class with some powerful interfaces, to allow you to create new powerful and usable projects much faster !
+The objective of this repository is to provide a base project with the `BaseModel` class + some powerful interfaces, to allow you to create new powerful and usable projects much faster !
 
 Furthermore, all other projects (such as [Text-To-Speech](https://github.com/yui-mhcp/text_to_speech), [Speech-To-Text](https://github.com/yui-mhcp/speech_to_text), [Siamese Networks](https://github.com/yui-mhcp/siamese_networks), ...) are completely based on the `BaseModel` class. 
 
@@ -12,6 +12,65 @@ For instance, the `TacotronLoss` will be provided in the [tts](https://github.co
 ## Project structure
 
 ```bash
+├── custom_architectures    : utilities to load custom architectures
+│   ├── transformers_arch       : main directory defining the Transformers architectures
+│   │   ├── text_transformer_arch.py    : defines the main Transformers blocks
+│   │   └── transformer_arch.py         : defines features for text-based Transformers
+│   ├── current_blocks.py       : defines some blocks that are currently used
+│   └── simple_models.py        : defines some classical models such as CNN / RNN / MLP and siamese
+├── custom_layers       : directory for the custom layers (such as MHA / custom activations)
+├── custom_train_objects    : custom objects used in training / testing
+│   ├── callbacks       : callbacks loading
+│   │   ├── ckpt_callback.py        : custom Checkpoint saver callback
+│   │   ├── predictor_callback.py   : allows to perform prediction during training
+│   │   └── terminate_on_nan.py     : stops training when NaN loss
+│   ├── generators      : custom data generators (used in some projects)
+│   ├── losses          : losses loading
+│   │   ├── ctc_loss.py         : CTC loss
+│   │   ├── ge2e_loss.py        : GE2E loss (experimental)
+│   │   └── masked_loss.py      : classic losses with masking
+│   ├── metrics         : metrics loading
+│   │   ├── confusion_matrix.py : custom metric for confusion matrix
+│   │   ├── equal_error_rate.py : EER implementation
+│   │   ├── metric_list.py      : custom class to centralize metrics
+│   │   ├── text_accuracy.py    : deprecated, prefer TextMetric
+│   │   └── text_metric.py  : custom metric for Text-based models
+│   ├── optimizers      : optimizer loading
+│   │   └── lr_schedulers.py    : custom learning-rate schedulers
+│   └── history.py      : main History class to compute training statistics
+├── datasets        : utility functions for dataset loading / processing
+│   ├── custom_datasets     : custom datasets support
+│   │   ├── audio_datasets.py   : custom audio-based datasets
+│   │   ├── image_datasets.py   : custom image-based datasets
+│   │   ├── preprocessing.py    : custom dataset processing
+│   │   └── text_datasets.py    : custom text-based datasets
+│   ├── dataset_utils.py    : dataset preparation for training
+│   └── sqlite_dataset.py   : custom .sqlite dataset support (experimental)
+├── hparams             : utilities for hyper-parameter definition
+│   ├── model_hparams
+│   │   └── hparams_training.py
+│   └── hparams.py          : utility class to define hyper-parameters
+├── loggers             : *
+├── models              : main directory for model's classes'
+│   ├── classification      : example for BaseModel subclassing
+│   │   └── base_classifier.py  : example MNIST classifier
+│   ├── interfaces          : directories for interfaces' classes'
+│   │   ├── base_audio_model.py     : defines many audio processing functions
+│   │   ├── base_embedding_model.py : defines embedding-based utilities
+│   │   ├── base_image_model.py     : defines functions for image processing
+│   │   ├── base_model.py           : main BaseModel class
+│   │   └── base_text_model.py      : defines functions for text encoding / decoding / processing
+│   ├── model_utils.py          : utilities functions on models
+│   └── weights_converter.py    : utilities to convert weights from 2 different models **
+├── pretrained_models   : main directory where all trained models are saved
+├── unitest         : *
+├── utils           : *
+├── Dockerfile      : runs a jupyter notebook within a Docker container (experimental)
+├── example_classifier-dist.ipynb
+├── example_classifier.ipynb
+├── example_classifier_2.ipynb
+├── example_datasets.ipynb
+
 ├── custom_architectures/   : custom architectures
 │   ├── transformers_arch/  : specific blocks for Transformers (BERT / BART / GPT-2 / ...)
 ├── custom_layers/          : custom layers
@@ -19,6 +78,7 @@ For instance, the `TacotronLoss` will be provided in the [tts](https://github.co
 │   ├── callbacks/          : custom callbacks
 │   ├── generators/         : custom data generators
 │   ├── losses/             : custom losses
+│   ├── metrics/            : custom metrics
 │   ├── optimizers/         : custom optimizers / lr schedulers
 ├── datasets/               : utilities for dataset loading / processing
 │   ├── custom_datasets/    : where to save custom datasets processing
@@ -32,12 +92,11 @@ For instance, the `TacotronLoss` will be provided in the [tts](https://github.co
 └── utils/                  : utilities for data processing
 
 ```
+\* Check [my data_processing project](https://github.com/yui-mhcp/data_processing) for more information on these modules. 
 
-See [my data_processing repository](https://github.com/yui-mhcp/data_processing) for more information on the `utils` module and `data processing` features, as well as `loggers` and `unitest`.
+\*\* Models convertion can either be from pytorch to tensorflow, either from tensorflow to pytorch or even tensorflow to tensorflow, if the order of weights differ. For this purpose, I have defined multiple functions allowing *partial transfer learning* or *name-based transfer learning*, which allows to transfer weights from layers with similar names. This is really useful for Transformers convertion from the `transformers` library as their implementations are not standardized and thus the models weights' order differ (which is not the case with my implementation). The name-based transfer is still an experimental feature so be careful (it is properly working for the implemented architectures).
 
-All projects also contain a `README.md` file giving general information on the project's features / usage, some links (tutorials / projects) related to the topic and some `example_*.jpynb` notebooks for practical usage examples. 
-
-\* The *interfaces* are specific classes for text, audio and image-related models, providing many useful methods for data loading and processing. 
+All projects also contain a `README.md` file giving general information on the project's features / usage, some links (tutorials / projects) related to the topic, and some `example_*.jpynb` notebooks for practical usage examples. 
 
 ## Available features
 
@@ -73,7 +132,7 @@ All projects also contain a `README.md` file giving general information on the p
 
 - **BaseModel** class :
 
-Check the [SUBCLASSING](SUBCLASSING.md) file to have a better overview of all functions and capabilities of this class.
+Check the [SUBCLASSING](SUBCLASSING.md) file to have a better overview of all functions and capabilities of this class. **This tutorial was created before the implementation of the interfaces' classes so I suggest you to check other projects to have better subclassing examples**.
 
 | Feature   | Fuction / class   | Description |
 | :-------- | :---------------- | :---------- |
@@ -123,7 +182,13 @@ Models must be unzipped in the `pretrained_models/` directory !
 - [x] Comment the code.
 - [x] Multi-GPU support.
 - [x] Allow to call `test` with other metrics than the default ones.
-- [x] Allow to call `test` multiple times in the same epoch and save all testings without overriding previous testing information.
+- [x] Allow to call `test` multiple times in the same epoch and save all testings without overriding previous testing information (simply give a different `test_name` to the test).
+- [ ] Make a subclassing tutorial based on the new interfaces
+- [ ] Make better tutorials to extend the project
+    - [ ] Add new architectures
+    - [x] Add new training objects
+    - [x] Add new datasets
+    - [ ] Add new models' classes
 
 ### Future improvments
 
@@ -141,6 +206,8 @@ Models must be unzipped in the `pretrained_models/` directory !
 ## Supported datasets
 
 Note that these supports are for the annotation-style of these datasets. Most of the time, multiple datasets share the same annotation mode so the functions are reusable for other datasets. 
+
+This list is not exhaustive, check the `èxample_datasets` to have a better view of supported datasets.
 
 To know the annotation-style required for each function you can see their documentation in the `datasets/custom_datasets` folder. 
 
@@ -328,12 +395,12 @@ Thanks to @Ananas120 for his contribution and sharing his implementation of `Tra
 
 ## Notes and references
 
+Tutorials :
+- [tensorflow's tutorials](https://tensorflow.org/tutorials) : list of tensorflow's tutorials covering many topics. Some of my projects are inspired from these tutorials as well as the `tf.data.Dataset` pipeline. 
+
 Papers :
 - [1] [GENERALIZED END TO END LOSS FOR SPEAKER VERIFICATION](https://arxiv.org/pdf/1710.10467.pdf) : original `GE2E` loss paper
 - [2] [Attention is all you need](https://papers.nips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) : original paper introducing the `WarmupScheduler` and `Transformer` architecture. 
-
-Tutorials :
-- [tensorflow's tutorials](https://tensorflow.org/tutorials) : list of tensorflow's tutorials covering many topics. Some of my projects are inspired from these tutorials as well as the `tf.data.Dataset` pipeline. 
 
 Datasets :
 - [SIWIS](https://datashare.ed.ac.uk/handle/10283/2353?show=full) dataset : french single-speaker dataset with really good quality recordings (~10k audios). 
