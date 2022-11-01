@@ -1,0 +1,17 @@
+services:
+    main:
+        image: main:latest
+        command: sh -c "python3 main.py experiments --names ..."
+        build:
+            context: .
+            dockerfile: Dockerfile
+        volumes:
+            - /storage:/storage
+            - ..:/app
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          capabilities: [gpu]
+                          device_ids: ['0']

@@ -46,6 +46,7 @@ For instance, the `TacotronLoss` will be provided in the [tts](https://github.co
 │   │   └── text_datasets.py    : custom text-based datasets
 │   ├── dataset_utils.py    : dataset preparation for training
 │   └── sqlite_dataset.py   : custom .sqlite dataset support (experimental)
+├── docker              : directory for the `docker` scripts (experimental)
 ├── hparams             : utilities for hyper-parameter definition
 │   ├── model_hparams
 │   │   └── hparams_training.py
@@ -70,28 +71,8 @@ For instance, the `TacotronLoss` will be provided in the [tts](https://github.co
 ├── example_classifier.ipynb
 ├── example_classifier_2.ipynb
 ├── example_datasets.ipynb
-
-├── custom_architectures/   : custom architectures
-│   ├── transformers_arch/  : specific blocks for Transformers (BERT / BART / GPT-2 / ...)
-├── custom_layers/          : custom layers
-├── custom_train_objects/   : custom objects for training
-│   ├── callbacks/          : custom callbacks
-│   ├── generators/         : custom data generators
-│   ├── losses/             : custom losses
-│   ├── metrics/            : custom metrics
-│   ├── optimizers/         : custom optimizers / lr schedulers
-├── datasets/               : utilities for dataset loading / processing
-│   ├── custom_datasets/    : where to save custom datasets processing
-├── hparams/                : utility class to define modulable hyper-parameters
-├── loggers/                : some logging utilities
-├── models/                 : main `BaseModel` subclasses directory
-│   ├── classification/     : directory for `BaseClassifier` classes
-│   ├── interfaces/         : directory for `BaseModel` class and useful interfaces\*
-├── pretrained_models/      : saving directory for pretrained models
-├── unitest/                : custom unitest framework to test models' consistency
-└── utils/                  : utilities for data processing
-
 ```
+
 \* Check [my data_processing project](https://github.com/yui-mhcp/data_processing) for more information on these modules. 
 
 \*\* Models convertion can either be from pytorch to tensorflow, either from tensorflow to pytorch or even tensorflow to tensorflow, if the order of weights differ. For this purpose, I have defined multiple functions allowing *partial transfer learning* or *name-based transfer learning*, which allows to transfer weights from layers with similar names. This is really useful for Transformers convertion from the `transformers` library as their implementations are not standardized and thus the models weights' order differ (which is not the case with my implementation). The name-based transfer is still an experimental feature so be careful (it is properly working for the implemented architectures).
@@ -185,18 +166,23 @@ Models must be unzipped in the `pretrained_models/` directory !
 - [x] Allow to call `test` multiple times in the same epoch and save all testings without overriding previous testing information (simply give a different `test_name` to the test).
 - [ ] Make a subclassing tutorial based on the new interfaces
 - [ ] Make better tutorials to extend the project
-    - [ ] Add new architectures
+    - [x] Add new architectures
     - [x] Add new training objects
     - [x] Add new datasets
     - [ ] Add new models' classes
+- [x] Add `Dockerfile` scripts (experimental)
+- [x] Add scripts to run automated experiments (experimental)
+- [ ] Add tutorial / commands to run `docker` containers
+- [ ] Add tutorial / commands to run experiments (check [my NLP project](https://github.com/yui-mhcp/nlp) for an example on MAG experiments)
 
 ### Future improvments
 
 - [x] Clean some parts of the code (non audio datasets / `current_blocks.py` / `simple_models.py`) (perfectly working but quite too big). 
 - [x] Add a model comparator to facilitate comparison between models architectures, training procedure and their resulting metrics. 
 - [x] Clean up image / text datasets processing and add new ones. 
-- [x] Improve datasets processing to make them faster with the `ThreadedQueue` utility (from `utils/thread_utils.py`). 
+- [x] Improve datasets processing to make them faster with the multi-threading framework (from `utils/thread_utils`). 
 - [x] Add `Transformers` support\*.
+- [x] Add `decorator`-based dataset adding. 
 - [ ] Improve the `BaseModel` class to allow new useful features (to be determined).
 - [ ] Add new datasets support.
 
@@ -205,9 +191,9 @@ Models must be unzipped in the `pretrained_models/` directory !
 
 ## Supported datasets
 
-Note that these supports are for the annotation-style of these datasets. Most of the time, multiple datasets share the same annotation mode so the functions are reusable for other datasets. 
+**WARNING** : This list is not exhaustive. Use the `print_datasets` method to have the exhaustive list. 
 
-This list is not exhaustive, check the `èxample_datasets` to have a better view of supported datasets.
+Note that these supports are for the annotation-style of these datasets. Most of the time, multiple datasets share the same annotation mode so the functions are reusable for other datasets. 
 
 To know the annotation-style required for each function you can see their documentation in the `datasets/custom_datasets` folder. 
 
@@ -287,47 +273,61 @@ To see a concrete example on how to subclass it, you can look at the [BaseClassi
 
 To have a better overview of possibilities and methods you can override / use, you can check the [SUBCLASSING](SUBCLASSING.md) file. It also provides the classic methodology I use to create complete project. 
 
-### Add new dataset
+If you want more advanced subclassing, you can check other projects and try it yourself ! The best way to learn is to try, (sometimes) fail and continue :smile:
 
-- If the dataset has a supported dataset format : 
-    1. Add your dataset in the `_custom_<type>_datasets` global variable with, in the configuration, an entry `type_annots` referring to the name of dataset which has the same annotation format\*.
+### Add new datasets
+
+- If the dataset has a supported dataset format :
+    1. Set its information with the `add_dataset` function like this :
+    ```python
+    # If your dataset has a pre-defined train / test split
+    add_dataset(
+        name = 'FQUAD', processing_fn = 'squad', task = QnA_FR,
+        train   = {'directory' : '{}/FQUAD1.0', 'subset' : 'train', 'version' : ''},
+        valid   = {'directory' : '{}/FQUAD1.0', 'subset' : 'valid', 'version' : ''}
+    )
+    # otherwise
+    add_dataset(
+        'piaf', processing_fn = 'squad', task = QnA_FR,
+        directory = '{}/piaf', subset = 'piaf', version = '1.1'
+    )
+    ```
     2. Use it ! :smile:
 
-- If the dataset you want to use has a different annotation format, you can add it by : 
-    1. Create the processing function (which should return a `pd.DataFrame` object).
-    2. Add your processing function in the `_<type>_processing_functions` global variable at the end of the file with the name of your dataset. 
-    3. Add your dataset with the configuration you want in the `_custom_<type>_datasets` global variable at the end of the file. 
+- If the dataset you want to use has a different annotation format, you can add it by :
+    1. (Optional) if the dataset type (audio / image / ...) is not in `custom_datasets/`, create a new file and copy a wrapper (such as the `text_dataset_wrapper` in `text_datasets.py`). The wrapper automatically cals `add_dataset` with the argument you give to the decorator.
+    2. Identify the wrapper and its expected dataset type (most of the time it is `pd.DataFrame` but it can change, for example the `image` wrapper expects a `dict {filename : infos}`). The wrapper allows to perform *standard transformations* on your dataset (such as *adding audio time*, *adding image shape,*, etc.)
+    3. Create your processing function and returns the expected data format.
+    4. Add the decorator with the expected information (copy-paste from another dataset and adapt it).
+    5. Use it ! :smile:
 
-- If you want to add a new type of dataset, you can create a new file in `custom_datasets` and copy the general structure of other files. Do not forget to add your custom datasets / processing functions in the `__init__.py` file !
-
-In dataset default configuration, instead of using absolute paths, you can use relative paths from a directory where you store all your datasets with the notation `{'directory' : '{}/my_dataset_name'` where `{}` is the main dataset directory which is contained in the `_dataset_dir` variable in `datasets/custom_datasets/__init__.py`.
+In the dataset's default configuration, you can set a relative path to your dataset, relative to the `dataset_dir` variable. It allows to store all your datasets in the same directory and set it with the `set_dataset_dir` function or the `DATASET_DIR` environment variable. For instance, `{'directory' : '{}/SIWIS'}`  means that SIWIS is at `{dataset_dir}/SIWIS`. By default `dataset_dir = D:/datasets` for Windows and `/storage` for Linux. 
 
 Note that these relative paths can only be put in the dictionnary configuration and **not** in default argument in the processing function.
 
-\* You can see an example in `datasets/custom_datasets/image_datasets.py` with the [fungi](https://github.com/bolddp/fungi-machinelearning-dataset) dataset which has the same annotation format as `COCO` : `{'type_annots' : 'coco'}`.
-
+If you have any trouble to add your dataset, do not hesitate to contact me or make a PR or even check other processing functions (as they are all quite similar). 
 
 ### Add new architecture
 
 #### Create new model
 
 In order to add new architecture, you just have to define it ! 
-1. Create a new file in `custom_architectures/`.
+1. Create a new file in `custom_architectures/` (or `transformers_arch` if it is a `Transformer`).
 2. Define your awesome custom architecture functions / classes.
-3. If you create classes, do not forget to define the `get_config()` method in order to allow `tensorflow` to save your class in `json` format.
+    2.1 (Reminder) If you create classes, do not forget to define the `get_config()` method in order to allow `tensorflow` to save your class in `json` format.
 4. Create a `custom_functions` global variable dictionnary that contains as key the name of the function and as value the function itself\*.
-5. If you create `tf.keras.Model` subclass or use custom layers : create a `custom_objects` global variable dictionnary which contains as key the name of your objects and as value the class itself\*\*.
+5. (Optional) If you create `tf.keras.Model` subclass or use custom layers : create a `custom_objects` global variable dictionnary which contains as key the name of your objects and as value the class itself\*\*.
 
 
 Explaination : 
-- The `custom_objects` is used in the `restore_models` function to allow `tensorflow` to deserialize your custom object (model or layer). 
-- The `custom_functions` will define all new architectures that will be available as callable (either classes or functions). 
-- The `get_config()` method of classes allows `tensorflow` to save your model configuration in order to recreate the exact same model when calling the `tensorflow.keras.models.model_from_json` function. 
+- The `custom_objects` is used in the `restore_models` function to allow `tensorflow` to deserialize your custom object (model or layer) with the `model_from_json` function. 
+- The `custom_functions` will define all new architectures that will be available as callable (either classes or functions) via the `get_architecture` method. 
+- The `get_config()` method allows `tensorflow` to save your model configuration in order to recreate the exact same model when calling the `tensorflow.keras.models.model_from_json` function. 
 
 
 \* Note that you should also put classes in this dictionnary !
 
-\*\* You should put in this variable all custom objects (such as `tf.keras.Layer` or `tf.keras.Model`) you created and use in your model. 
+\*\* You should put in this variable all custom objects (such as `tf.keras.layers.Layer` or `tf.keras.Model`) you created and use in your model. 
 
 
 #### Create new layer
@@ -402,7 +402,7 @@ Papers :
 - [1] [GENERALIZED END TO END LOSS FOR SPEAKER VERIFICATION](https://arxiv.org/pdf/1710.10467.pdf) : original `GE2E` loss paper
 - [2] [Attention is all you need](https://papers.nips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) : original paper introducing the `WarmupScheduler` and `Transformer` architecture. 
 
-Datasets :
+Datasets (non-exhaustive list) :
 - [SIWIS](https://datashare.ed.ac.uk/handle/10283/2353?show=full) dataset : french single-speaker dataset with really good quality recordings (~10k audios). 
 - [CommonVoice](https://commonvoice.mozilla.org/fr/datasets) dataset : multi-speaker dataset available for multiple language (but quite noisy so not really interesting for TTS) (~260k audios in Fr). 
 - [VoxForge](http://www.voxforge.org/) dataset : same as the CommonVoice dataset with more speakers but less audio per speaker (~20k audios). 
@@ -475,4 +475,4 @@ Citations :
 
 ```
 
-Note : citations for datasets are taken from [the tensorflow dataset catalog](https://www.tensorflow.org/datasets/catalog/overview) which also support these datasets but in another representation
+Note : citations for datasets are taken from [the tensorflow dataset catalog](https://www.tensorflow.org/datasets/catalog/overview) which also support these datasets but in another representation. 

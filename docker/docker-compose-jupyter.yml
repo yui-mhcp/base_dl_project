@@ -1,0 +1,16 @@
+services:
+    main:
+        image: main:latest
+        build:
+            context: .
+            dockerfile: Dockerfile-jupyter
+        volumes:
+            - /storage:/storage
+            - ..:/app
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          capabilities: [gpu]
+                          device_ids: ['0']
