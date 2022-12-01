@@ -22,7 +22,7 @@ pretrained_models/mnist_classifier/ : the main directory of your model
 
 ## Subclassing `BaseModel`
 
-I will not show an example of subclassing here (you can check the [BaseClassifier](models/classification/base_classifier.py) example for that) but will describe the principal methods you can define / override.
+I will not show an example of subclassing here (you can check the [BaseClassifier](models/classification/base_classifier.py) example for that). Instead I will describe the principal methods you can define / override.
 
 If you want to subclass for a specific topic (image / text / audio), I suggest you to check other repositories related to this topic and their main class : the available interfaces give many utilities to process these kind of data. 
 
@@ -31,7 +31,7 @@ If you want to subclass for a specific topic (image / text / audio), I suggest y
 #### Main properties
 
 - `input_signature` / `output_signature`    : signatures for input / output. They are used to compile functions in `tensorflow graph` mode.
-- `training_hparams`    : if you have custom training hparams to define (do not forget to define the `init_train_config` function).
+- `training_hparams`    : if you have custom training hparams to define.
 
 #### Secondary properties
 
@@ -47,11 +47,13 @@ You can override them in order to add more hyperparameters to your model. Do not
 
 You must also call their respective `super()` method to benefit from all base configuration and builds.
 
+**Important note** : if you use an interface, their init / config are not used by default, do not forget to add them ! Their names are for instance `_init_audio(...)` and `get_config_audio()` for the audio interface.
+
 - `_build_model` :
 
-General function to define configuration for model architectures.
+General function to define configuration for the actual model architectures.
 
-The typical structure is to define model's configuration and call `super().build_model()` with keywargs where keys are the model's variable name and value is its configuration (passed to the `get_architecture()` method). Configuration must therefore contain a `architecture_name` field.
+The typical structure is to define model's configuration and call `super().build_model()` with keywargs where keys are the model's variable name and value is its configuration (passed to the `get_architecture()` method). Configuration must therefore contain an `architecture_name` field.
 
 You can either define a single model (as in the classifier : `classifier = classifier_config`) or multiple models (for instance in `GAN`'s : `generator = generator_config, discrimintator = discriminator_config` which will create 2 instance variables `generator` and `discriminator`).
 
@@ -71,7 +73,7 @@ Note that if your model contains multiple sub models (such as `GAN`'s), you **mu
 
 - `train_step`, `eval_step` : 
 
-These methods takes as input a `batch (input, targets)` with `[input_signature, output_signature]` signatures and you cannot change this signature in order to run in graph mode. It means that the output of your latest processing function **must** be a tuple of 2 elements : `inputs` and `targets` with right shapes and types.
+These methods take as input a `batch (input, targets)` with `[input_signature, output_signature]` signatures and you cannot change this signature in order to run in graph mode. It means that the output of your latest processing function **must** be a tuple of 2 elements : `inputs` and `targets` with correct shapes and types.
 
 Note that inside the `{train / eval}_step` you can make whathever you want so it is not a limitation ! :smile:
 
@@ -81,10 +83,11 @@ Note that inside the `{train / eval}_step` you can make whathever you want so it
 
 - `__str__` : if you want to show more information (on custom configuration) in model descriptions.
 - `_init_folders`   : only necessary if you want to create new subfolders to save specific elements.
-- `init_train_config`  / `update_train_config` : if you have custom training hyper-parameters to define.
+- `init_train_config`  / `update_train_config` : if you have custom training hyper-parameters to manually configure.
 - `get_dataset_config` : can be useful if you need padded batch for instance.
 - `compile` : if you want to modify the default loss / metrics.
 - `predict` : if you want to have more powefrul features for prediction.
+- `infer`   : this method does not exist by default but can be useful for generative models where `call` is typically used for training with *teacher-forcing*.
 
 ### Classical subclassing procedure
 
@@ -92,9 +95,9 @@ Note that inside the `{train / eval}_step` you can make whathever you want so it
 
 The first most important part is to define the hyper parameters you want in your model. 
 
-For this purpose you should redefine the `__init__` method and call `super().__init__(** kwargs)` at the end.
+For this purpose you should redefine the `__init__` method and call `super().__init__(** kwargs)` at the end. You can typically call the `_init_{audio / image / text}` method from the interface(s) used !
 
-Note that if you need some directories such as the `save_dir`, you can call the `super().__init__()` before using them because they are created in the `super` function.
+Note that if you need some directories such as the `save_dir`, you can call the `super().__init__()` before using them (because they are created in the `super` function).
 
 Next you can add these custom configuration in the `get_config()` and in the `__str__` one in order to have a good overview when printing your model.
 
@@ -104,17 +107,17 @@ To add custom training parameters, you should redefine the `training_hparams` pr
     @property
     def training_hparams(self):
         return super().training_hparams(
-            max_input_length    = 150,
-            max_output_length   = 1024
+            max_input_length    = None,
+            max_output_length   = None
         )
 ```
-And define these variables in the `init_train_config()` method. This procedure allows the `History` callback to track them. 
+**Important note** : in the example above, these 2 configuration are typically both training parameters and classical parameters. Put a `None` value in this case allows to not modify the current value (if your class already has this instance variable). However they are still required in the `training_hparams` if you want them to be modified and tracked at training time.
 
 #### Define the model architecture
 
 Now that you have defined your general model configuration, you can define your model architecture.
 
-Quite simple : just redefine the `_build_model()` method and call `super()._build_model(...)` with *kwargs* where keys are your models' variable name and values are their configuration ! (do not forget the `architecture_name` in their config).
+Quite simple : just redefine the `_build_model()` method and call `super()._build_model(...)` with *kwargs*, where keys are your models' variable name and values are their configuration ! (do not forget the `architecture_name` in their config). A good practice is to create your configuration directory and directly pass it to `custom_architectures.get_architecture(** config)` that returns the architecture !
 
 The `super` method will create them as instance variable, add them in the `Checkpoint` and save their configuration / weights in the `saving` directory !
 
@@ -124,9 +127,9 @@ Example (from `BaseClassifier`) :
 ```python
     def _build_model(self, ** kwargs):
         super()._build_model(classifier = {
-            'architecture_name' : 'simple_cnn',
-            'input_shape'   : self.input_size,
-            'output_shape'  : 1 if self.nb_class <= 2 else self.nb_class,
+            'architecture_name' : 'simple_cnn',     # The model is a regular CNN
+            'input_shape'   : self.input_size,      # The image's input size
+            'output_shape'  : 1 if self.nb_class <= 2 else self.nb_class,   # The number of units for the last dense layer
             
             'final_activation'  : final_activation,
             ** kwargs
@@ -135,23 +138,27 @@ Example (from `BaseClassifier`) :
 
 This method will : 
 1. Call `get_architecture()` with value as parameters. 
-2. Create a simple `simple_cnn` architecture (which is a `CNN` with single input)
+2. Create a `simple_cnn` architecture (which is a `CNN` with single input)
 3. Associate it to the `instance variable "classifier"`
 
 #### Define the data processing pipeline
 
 Now that your model is configured and created, you need to define the processing pipeline.
 
-The default behaviour of many dataset processing is to give as output a `pandas.DataFrame` which will be converted to a list of dict in the `prepare_dataset` method. It means that your first method in the processing pipeline will mostly receive a dictionary where keys are columns names.
+The default behaviour of many dataset processing is to give as output a `pandas.DataFrame` which will be converted to a list of dict in the `prepare_dataset` method. It means that your first method in the processing pipeline will mostly receive a dictionary where keys are column's names.
 
 The final function in the pipeline **must** return a tuple `(inputs, targets)` matching respectivelly `input_signature` and `output_signature` signatures. 
 
-The methods you can define : 
-- `encode_data` : often use to convert your data dictionary to a tuple of encoded item (loading the image / audio from its filename, encode text to their index, ...).
-- `filter_data` : can be useful to filter too long data that will raises `Out Of Memory errors` (for instance audios longer than a given time)\*.
+The methods you can define (in the application order) : 
+- `encode_data` : often use to convert your data dictionary to a tuple of encoded item (loading the image / audio from its filename, encode text to tokens, ...).
+- `filter_data` : can be useful to filter too long data that would raise `Out Of Memory errors` (for instance audios longer than a given time)\*.
 - `preprocess_data` : usefull to apply time-consuming processing such as normalization.
-- `memory_consuming_fn` : usefull for memory-intensive operation which will not be cached.
 - `augment_data` : useful for personnalized data augmentation (a `augment_prct` variable is by default created if you want to augment a given proportion of your batches).
+- `memory_consuming_fn` : usefull for memory-intensive operation which will not be cached (not often used).
+
+Note that if `batch_before_map` is set to `True`, the `preprocess_data` is applied after `augment_data` and get as input a batch of data. Otherwise, all functions get a single input.
+
+Many processing functions as well as filters are defined in the interfaces (`encode_text`, `get_image`, `get_audio`, ...), take a look at them to avoid re-writing them ! ;)
 
 \* A good practice is to define these thresholds as training hyper-parameters so that the `History` will keep track of each specified value for each training phase
 
@@ -196,7 +203,7 @@ Now that all your model is define, it's time to use it for funny applications ! 
 This is a really powerful feature of the `BaseModel` class : if a model already exists, just specify its name and it will be loaded !
 
 In practice, you can just type : 
-`model = BaseModel(nom = 'mnist_classifier')`
+`model = BaseModel(nom = 'mnist_classifier')` or `get_pretrained('mnist_classifier')`
 and the model will magically be loaded with all its configuration and models will be restored. :smile:
 
 This even if you have arguments in the constructor without default value, you do not need to specify them !

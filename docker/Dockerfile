@@ -8,9 +8,9 @@ COPY requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-RUN apt install -y graphviz
+RUN pip install --upgrade jupyter notebook jupyterlab
 
-COPY .. .
+RUN apt install -y graphviz
 
 ARG USER_ID
 ARG USER_NAME
@@ -19,3 +19,5 @@ ARG GROUP_ID
 RUN adduser -u ${USER_ID} ${USER_NAME}
 
 USER ${USER_ID}:${GROUP_ID}
+
+COPY . .

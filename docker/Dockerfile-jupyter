@@ -1,6 +1,6 @@
-FROM tensorflow/tensorflow:latest-gpu-notebook
+FROM tensorflow/tensorflow:latest-gpu
 
-WORKDIR /tensorflow/app
+WORKDIR /app
 
 RUN apt-get update && apt-get install -y ffmpeg poppler-utils
 
@@ -8,9 +8,9 @@ COPY requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-RUN apt install -y graphviz
+RUN pip install --upgrade jupyter notebook jupyterlab
 
-COPY .. .
+RUN apt install -y graphviz
 
 ARG USER_ID
 ARG USER_NAME
@@ -20,4 +20,6 @@ RUN adduser -u ${USER_ID} ${USER_NAME}
 
 USER ${USER_ID}:${GROUP_ID}
 
-CMD ["jupyter", "notebook", "--ip 0.0.0.0", "--no-browser", "--allow-root"]
+COPY . .
+
+CMD ["jupyter", "lab", "--notebook-dir=/tensorflow/app", "--ip=0.0.0.0", "--no-browser", "--allow-root"]

@@ -1,9 +1,11 @@
 services:
     main:
-        image: main:latest
+        image: main-jupyter:latest
         build:
-            context: .
+            context: ..
             dockerfile: Dockerfile-jupyter
+        ports:
+            - 8888:8888
         volumes:
             - /storage:/storage
             - ..:/app

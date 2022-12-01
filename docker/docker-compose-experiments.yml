@@ -1,9 +1,9 @@
 services:
     main:
         image: main:latest
-        command: sh -c "python3 main.py experiments --names ..."
+        command: sh -c "python3 main.py experiments --names mag_nq_coqa_newsqa_off_ct_wt_ib_2_2_mean mag_nq_coqa_newsqa_off_ct_wt_ib_2_2_dense"
         build:
-            context: .
+            context: ..
             dockerfile: Dockerfile
         volumes:
             - /storage:/storage

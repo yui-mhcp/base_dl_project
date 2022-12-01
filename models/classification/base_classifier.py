@@ -114,7 +114,7 @@ class BaseClassifier(BaseModel):
         
         kwargs.setdefault('size', 5)
         kwargs.setdefault('show', False)
-        kwargs.setdefault('ncols', math.sqrt(max_pred))
+        kwargs.setdefault('ncols', int(math.sqrt(max_pred)))
         
         titles = [
             'Classs {}\npred {} ({:.2f} %)'.format(t, p_c, 100 * pred[i,p_c])

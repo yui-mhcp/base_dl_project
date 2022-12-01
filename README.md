@@ -46,7 +46,7 @@ For instance, the `TacotronLoss` will be provided in the [tts](https://github.co
 │   │   └── text_datasets.py    : custom text-based datasets
 │   ├── dataset_utils.py    : dataset preparation for training
 │   └── sqlite_dataset.py   : custom .sqlite dataset support (experimental)
-├── docker              : directory for the `docker` scripts (experimental)
+├── docker              : directory for the `docker` scripts
 ├── hparams             : utilities for hyper-parameter definition
 │   ├── model_hparams
 │   │   └── hparams_training.py
