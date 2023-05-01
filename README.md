@@ -4,7 +4,7 @@ The objective of this repository is to provide a base project with the `BaseMode
 
 Furthermore, all other projects (such as [Text-To-Speech](https://github.com/yui-mhcp/text_to_speech), [Speech-To-Text](https://github.com/yui-mhcp/speech_to_text), [Siamese Networks](https://github.com/yui-mhcp/siamese_networks), ...) are completely based on the `BaseModel` class. 
 
-Note : I provide a `BaseClassifier` class as example, in order to illustrate how to subclass `BaseModel` to create a `MNIST` classifier. However, this is a really simple implementation for the `MNIST` dataset : I will later create a real `classification` repository for more advanced classification (images, text, multi-labels, ...).
+Note : a `BaseClassifier` class is provided as example, in order to illustrate how to subclass `BaseModel` to create a `MNIST` classifier. However, this is a really simple implementation for the `MNIST` dataset : I will later create a real `classification` repository for more advanced classification (images, text, multi-labels, ...).
 
 Note 2 : this project tends to be as generic as possible. It is the reason why I do not provide specific architectures / generators as they are project-specific.
 For instance, the `TacotronLoss` will be provided in the [tts](https://github.com/yui-mhcp/text_to_speech) project with the `Tacotron2` model / architecture.
@@ -154,7 +154,7 @@ Models must be unzipped in the `pretrained_models/` directory !
 
 **For audio processing** : you should also install `ffmpeg` if you want to use some audio processing functions.
 
-\* Some requirements are specific to functions (such as `noisereduce` is specific for noise reduction). Therefore I have put some requirements aside with the associated function : you can simply remove them if you do not want to use the function. The library is imported inside the function so that it will not raise any error ;)
+\* Some requirements are specific to functions (such as `noisereduce` is specific for noise reduction). If you do not want to use the function, you can simply remove the requirement.
 
 ## TO-DO list
 

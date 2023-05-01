@@ -12,6 +12,7 @@
 
 import os
 import math
+import numpy as np
 import tensorflow as tf
 
 from models.interfaces import BaseModel
@@ -83,7 +84,7 @@ class BaseClassifier(BaseModel):
         des += "Multi-class : {}\n".format(self.multi_class)
         return des
     
-    def compile(self, **kwargs):
+    def compile(self, ** kwargs):
         loss = 'binary_crossentropy' if self.multi_class or self.nb_class == 1 else 'sparse_categorical_crossentropy'
         metric = 'binary_accuracy' if self.multi_class or self.nb_class == 1 else 'sparse_categorical_accuracy'
         
@@ -92,9 +93,11 @@ class BaseClassifier(BaseModel):
         
         super().compile(** kwargs)
     
+    def get_input(self, filename, ** kwargs):
+        return load_image(filename, target_shape = self.input_size, dtype = tf.float32, ** kwargs)
+    
     def preprocess_data(self, data):
-        image = load_image(data['image'], target_shape = self.input_size, dtype = tf.float32)
-        return image, tf.cast(data['label'], tf.int32)
+        return self.get_input(data['image']), tf.cast(data['label'], tf.int32)
     
     def _get_train_config(self, * args, test_size = 1, test_batch_size = 256, ** kwargs):
         return super()._get_train_config(
@@ -143,13 +146,15 @@ class BaseClassifier(BaseModel):
     
     def build_gif(self, show = True, ** kwargs):
         embeddings_gif = build_gif(
-            self.train_test_dir, img_name = '*_embed.png', ** kwargs,
-            filename = os.path.join(self.train_test_dir, 'embeddings.gif')
+            glob.glob(os.path.join(self.train_test_dir, '*_embed.png')),
+            filename = os.path.join(self.train_test_dir, 'embeddings.gif'),
+            ** kwargs
         )
         
         prediction_gif = build_gif(
-            self.train_test_dir, img_name = '*_pred.png', ** kwargs,
-            filename = os.path.join(self.train_test_dir, 'predictions.gif')
+            glob.glob(os.path.join(self.train_test_dir, '*_pred.png')),
+            filename = os.path.join(self.train_test_dir, 'predictions.gif'),
+            ** kwargs
         )
         
         if show:
@@ -158,24 +163,24 @@ class BaseClassifier(BaseModel):
         
         return embeddings_gif, prediction_gif
         
-    def predict(self, datas):
-        datas = tf.cast(datas, tf.float32)
-        if tf.reduce_max(datas) > 1.:
-            datas = datas / 255.
-        if len(tf.shape(datas)) == 2: datas = tf.expand_dims(datas, axis = -1)
-        if len(tf.shape(datas)) == 3: datas = tf.expand_dims(datas, axis = 0)
-        pred = self(datas, training = False)
+    def predict(self, images):
+        if isinstance(images, (np.ndarray, tf.Tensor)) and len(images.shape) == 3:
+            images = tf.expand_dims(images, axis = 0)
+            
+        images = tf.stack([self.get_input(image) for image in images], axis = 0)
         
-        pred_class = tf.argmax(pred, axis = -1)
+        pred = self(images, training = False)
+        
+        pred_class = tf.argmax(pred, axis = -1).numpy()
         
         return [(self.labels[c], pred[i,c]) for i, c in enumerate(pred_class)]
     
-    def get_config(self, *args, **kwargs):
-        config = super().get_config(*args, **kwargs)
+    def get_config(self, * args, ** kwargs):
+        config = super().get_config(* args, ** kwargs)
         config['input_size']    = self.input_size
         config['labels']        = self.labels
         config['nb_class']      = self.nb_class
-        config['multi_class'] = self.multi_class
+        config['multi_class']   = self.multi_class
         
         return config
         
