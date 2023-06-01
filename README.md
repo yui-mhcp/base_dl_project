@@ -154,7 +154,7 @@ Models must be unzipped in the `pretrained_models/` directory !
 
 **For audio processing** : you should also install `ffmpeg` if you want to use some audio processing functions.
 
-\* Some requirements are specific to functions (such as `noisereduce` is specific for noise reduction). If you do not want to use the function, you can simply remove the requirement.
+**Important Note** : some *heavy* requirements are removed in order to avoid unnecessary installation of such packages (e.g. `torch` and `transformers`), as they are used only in very specific functions.  It is therefore possible that some `ImportError` occurs when using specific functions, such as `TextEncoder.from_transformers_pretrained(...)`. 
 
 ## TO-DO list
 
