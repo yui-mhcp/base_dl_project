@@ -1,6 +1,5 @@
-
-# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -14,10 +13,10 @@ import os
 import logging
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 
-from hparams import HParams
-from models.interfaces.base_model import BaseModel
+from .base_model import BaseModel
+from utils.hparams import HParams
+from utils.keras_utils import TensorSpec, ops
 from utils import convert_to_str, load_embedding, save_embeddings, select_embedding, sample_df
 
 logger  = logging.getLogger(__name__)
@@ -28,9 +27,7 @@ class BaseEmbeddingModel(BaseModel):
     def _init_embedding(self,
                         encoder_name,
                         embedding_dim,
-                        * args,
                         use_label_embedding = True,
-                        ** kwargs
                        ):
         """
             Initializes the embedding-related variables
@@ -46,17 +43,13 @@ class BaseEmbeddingModel(BaseModel):
         self.embedding_dim  = embedding_dim
         self.use_label_embedding    = use_label_embedding
     
-    def _init_folders(self):
-        super(BaseEmbeddingModel, self)._init_folders()
-        os.makedirs(self.embedding_dir, exist_ok = True)
-    
     @property
     def embedding_dir(self):
         return os.path.join(self.folder, 'embeddings')
     
     @property
     def has_default_embedding(self):
-        return len(os.listdir(self.embedding_dir)) > 0
+        return os.path.exists(self.embedding_dir) and len(os.listdir(self.embedding_dir)) > 0
     
     @property
     def default_embedding_file(self):
@@ -188,18 +181,12 @@ class BaseEmbeddingModel(BaseModel):
         
     def maybe_augment_embedding(self, embedding):
         if self.augment_embedding:
-            embedding = tf.cond(
-                self.augment_embedding and tf.random.uniform(()) < self.augment_prct,
-                lambda: embedding + tf.random.normal(tf.shape(embedding), stddev = 0.025),
+            return ops.cond(
+                ops.random.uniform(()) < self.augment_prct,
+                lambda: embedding + ops.random.normal(ops.shape(embedding), stddev = 0.025),
                 lambda: embedding
             )
         return embedding
-        
-    def train(self, x, * args, ** kwargs):
-        if isinstance(x, pd.DataFrame) and not self.has_default_embedding:
-            self.set_default_embeddings(sample_df(x, n = 50, n_sample = 10))
-        
-        return super().train(x, * args, ** kwargs)
     
     def get_config_embedding(self):
         return {

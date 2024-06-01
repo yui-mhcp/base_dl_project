@@ -1,6 +1,5 @@
-
-# Copyright (C) 2022 yui-mhcp project's author. All rights reserved.
-# Licenced under the Affero GPL v3 Licence (the "Licence").
+# Copyright (C) 2022-now yui-mhcp project author. All rights reserved.
+# Licenced under a modified Affero GPL v3 Licence (the "Licence").
 # you may not use this file except in compliance with the License.
 # See the "LICENCE" file at the root of the directory for the licence information.
 #
@@ -13,10 +12,10 @@
 import os
 import logging
 import pandas as pd
-import tensorflow as tf
 
-from hparams import HParams
-from models.interfaces.base_model import BaseModel
+from .base_model import BaseModel
+from utils.hparams import HParams
+from utils.keras_utils import TensorSpec, ops
 from utils.audio import MelSTFT, load_audio, load_mel
 from utils.audio import random_pad, random_shift, random_noise
 
@@ -141,7 +140,7 @@ class BaseAudioModel(BaseModel):
         else:
             shape = (None, None, self.n_mel_channels, 1)
         
-        return tf.TensorSpec(shape = shape, dtype = tf.float32)
+        return TensorSpec(shape = shape, dtype = 'float32')
     
     @property
     def n_mel_channels(self):
@@ -189,13 +188,13 @@ class BaseAudioModel(BaseModel):
                 - data  : any value supported by `load_audio`
                 - kwargs    : additional kwargs forwarded to `load_audio`
             Return :
-                - audio : 2-D `tf.Tensor` with shape `(audio_len, 1)`
+                - audio : 2-D `Tensor` with shape `(audio_len, 1)`
         """
-        """ Load audio and returns a 2-D `tf.Tensor` with shape `(audio_len, 1)` """
+        """ Load audio and returns a 2-D `Tensor` with shape `(audio_len, 1)` """
         kwargs  = {** self.trim_kwargs, ** kwargs}
         audio   = load_audio(data, self.audio_rate, ** kwargs)
         
-        return tf.expand_dims(audio, axis = 1)
+        return ops.expand_dims(audio, axis = 1)
     
     def get_mel_input(self, data, ** kwargs):
         """
@@ -206,9 +205,9 @@ class BaseAudioModel(BaseModel):
                 - kwargs    : additional kwargs forwarded to `load_mel`
             Return :
                 if `self.mel_as_image`:
-                    - mel   : `tf.Tensor` with shape `(n_frames, self.n_mel_channels, 1)`
+                    - mel   : `Tensor` with shape `(n_frames, self.n_mel_channels, 1)`
                 else:
-                    - mel   : `tf.Tensor` with shape `(n_frames, self.n_mel_channels)`
+                    - mel   : `Tensor` with shape `(n_frames, self.n_mel_channels)`
         """
         kwargs = {** self.trim_kwargs, ** kwargs}
         mel = load_mel(
@@ -218,8 +217,8 @@ class BaseAudioModel(BaseModel):
             ** kwargs
         )
         
-        if len(tf.shape(mel)) == 3: mel = tf.squeeze(mel, 0)
-        if self.mel_as_image:       mel = tf.expand_dims(mel, axis = -1)
+        if len(ops.shape(mel)) == 3: mel = ops.squeeze(mel, 0)
+        if self.mel_as_image:       mel = ops.expand_dims(mel, axis = -1)
         
         return mel
     
@@ -232,11 +231,11 @@ class BaseAudioModel(BaseModel):
                 - kwargs    : additional kwargs forwarded to the right function
             Return :
                 If `not self.use_mel_fn`:
-                    - audio : 2-D `tf.Tensor` with shape `(audio_len, 1)`
+                    - audio : 2-D `Tensor` with shape `(audio_len, 1)`
                 elif `not self.mel_as_image`:
-                    - mel   : 2-D `tf.Tensor` with shape `(n_frames, self.n_mel_channels)`
+                    - mel   : 2-D `Tensor` with shape `(n_frames, self.n_mel_channels)`
                 else:
-                    - mel   : 3-D `tf.Tensor` with shape `(n_frames, self.n_mel_channels, 1)`
+                    - mel   : 3-D `Tensor` with shape `(n_frames, self.n_mel_channels, 1)`
         """
         """ Either calls `get_mel_input` or `get_audio_input` depending on `audio_format` """
         if isinstance(data, list):
@@ -259,8 +258,8 @@ class BaseAudioModel(BaseModel):
             audio = random_shift(audio, min_length = max_length)
             audio = random_pad(audio, max_length)
         
-        audio = tf.cond(
-            tf.random.uniform(()) < self.augment_prct,
+        audio = ops.cond(
+            ops.random.uniform(()) < self.augment_prct,
             lambda: random_noise(audio),
             lambda: audio
         )
@@ -272,21 +271,21 @@ class BaseAudioModel(BaseModel):
             Augment `mel` with random noise and random shift / padding if `max_length > len(audio)`
         """
         if max_length > len(mel):
-            max_padding = max_length - tf.shape(mel)[0]
+            max_padding = max_length - ops.shape(mel)[0]
             if max_padding > 0:
-                padding_left = tf.random.uniform(
+                padding_left = ops.random.uniform(
                     (),
                     minval = 0, 
                     maxval = max_padding,
-                    dtype  = tf.int32
+                    dtype  = 'int32'
                 )
 
                 if max_padding - padding_left > 0:
-                    padding_right = tf.random.uniform(
+                    padding_right = ops.random.uniform(
                         (),
                         minval = 0, 
                         maxval = max_padding - padding_left,
-                        dtype = tf.int32
+                        dtype = 'int32'
                     )
                 else:
                     padding_right = 0
@@ -296,12 +295,12 @@ class BaseAudioModel(BaseModel):
                 else:
                     padding = [(padding_left, padding_right), (0, 0)]
 
-                mel = tf.pad(mel, padding)
+                mel = ops.pad(mel, padding)
         
         
-        return tf.cond(
-            tf.random.uniform(()) < self.augment_prct,
-            lambda: mel + tf.random.normal(tf.shape(mel)),
+        return ops.cond(
+            ops.random.uniform(()) < self.augment_prct,
+            lambda: mel + ops.random.normal(ops.shape(mel)),
             lambda: mel
         )
     
