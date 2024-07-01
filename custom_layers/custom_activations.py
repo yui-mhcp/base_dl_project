@@ -35,8 +35,10 @@ class CustomActivation(keras.layers.Layer):
         config.update({'activation' : self.activation})
         return config
 
-def l2_norm(x, axis = -1):
+def l2_normalization(x, axis = -1):
     return K.divide_no_nan(x, K.norm(x, axis = axis, keepdims = True))
+
+l2 = l2_norm = l2_normalize = l2_normalization
 
 def glu(x, axis = -1):
     """ Gated Linear Unit activation function (equivalent to torch.nn.functional.glu) """

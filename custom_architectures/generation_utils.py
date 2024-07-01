@@ -339,9 +339,11 @@ def infer_beam_search(self,
             enc_padding_mask    = enc_padding_mask,
             
             return_state    = config.use_cache or return_state,
-            as_dict = True,
-            
-            ** kwargs
+            return_attention    = config.return_attention,
+            return_last_attention   = config.return_last_attention,
+            return_only_cross_attention = config.return_only_cross_attention,
+            return_mask = False,
+            as_dict = True
         )
         logits = model_out.output
         if len(K.shape(logits)) == 3: logits = logits[:, -1, :]

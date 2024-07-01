@@ -100,6 +100,7 @@ class BaseAudioModel(BaseModel):
                     mel_fn_config['sampling_rate'] = self.audio_rate
                 self.mel_fn    = MelSTFT.create(mel_fn, ** mel_fn_config)
         
+        self.trim_kwargs = {}
         # Assert the configuration is valid / complete
         if not self.audio_rate:
             assert self.use_mel_fn, 'You must specify the `audio_rate` parameter !'
@@ -108,14 +109,6 @@ class BaseAudioModel(BaseModel):
         if self.use_mel_fn:
             assert self.audio_rate == self.mel_fn.sampling_rate, 'The `audio_rate` differs from the `mel_fn.sampling_rate` : {} != {}'.format(self.audio_rate, self.mel_fn.sampling_rate)
     
-    def init_train_config(self, ** kwargs):
-        if not hasattr(self, 'trim_kwargs'): self.trim_kwargs = {}
-        
-        super(BaseAudioModel, self).init_train_config(** kwargs)
-        
-        if not self.use_mel_fn: self.trim_mel = False
-        if hasattr(self, 'trim_mel') and not self.trim_mel: self.trim_mel_method = None
-
     def _update_trim_config(self, key, val):
         self.trim_kwargs[key] = val
 

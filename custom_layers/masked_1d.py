@@ -12,6 +12,11 @@
 import keras
 import keras.ops as K
 
+def _compute_new_len(seq_len, kernel_size, strides, padding, dilation_rate):
+    if padding != 'same': seq_len = seq_len - kernel_size + 1
+    new_len = K.maximum(1, K.cast(K.ceil(seq_len / strides), 'int32'))
+    return new_len
+
 def build_mask_1d(inputs, mask, kernel_size, strides, padding, dilation = 1):
     if mask is None: return None
 
@@ -20,8 +25,7 @@ def build_mask_1d(inputs, mask, kernel_size, strides, padding, dilation = 1):
         return mask[:, (kernel_size - 1) * dilation :]
     
     seq_len = K.count_nonzero(mask, axis = 1)
-    if padding != 'same': seq_len = seq_len - kernel_size + 1
-    new_len = K.maximum(1, K.cast(K.ceil(seq_len / strides), 'int32'))
+    new_len = _compute_new_len(seq_len, kernel_size, strides, padding, dilation)
     
     return K.arange(K.shape(inputs)[1])[None, :] < new_len[:, None]
 
@@ -81,7 +85,12 @@ class MaskedZeroPadding1D(keras.layers.ZeroPadding1D):
     
 @keras.saving.register_keras_serializable('masked_layers')
 class MaskedConv1D(keras.layers.Conv1D):
-    def compute_mask(self, inputs, mask = None):
+    def compute_mask(self, inputs, mask = None, *, use_cached = True):
+        if use_cached:
+            mask = getattr(self, '_cached_mask', mask)
+            if mask is not None: self._cached_mask = None
+            return mask
+        
         return build_mask_1d(
             inputs, mask, self.kernel_size[0], self.strides[0], self.padding, self.dilation_rate[0]
         )
@@ -93,8 +102,9 @@ class MaskedConv1D(keras.layers.Conv1D):
         out = super().call(inputs)
 
         if mask is not None:
-            mask = self.compute_mask(out, mask)
+            mask = self.compute_mask(out, mask, use_cached = False)
             out  = out * K.cast(mask[:, :, None], out.dtype)
+            self._cached_mask = mask
             try:
                 out._keras_mask = mask
             except AttributeError:

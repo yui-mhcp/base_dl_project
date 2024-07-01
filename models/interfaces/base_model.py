@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import os
+import json
 import time
 import keras
 import logging
@@ -20,11 +21,12 @@ from functools import cached_property
 from keras.models import load_model, model_from_json
 
 from utils import HParams, copy_methods, dump_json, load_json, time_to_string
-from utils.keras_utils import ops, graph_compile
+from utils.keras_utils import TensorSpec, ops, graph_compile
 from utils.datasets import prepare_dataset, summarize_dataset
 from models.saving import get_saving_dir, get_model_dir, is_model_name
 from models.model_utils import _get_tracked_type, describe_model, optimizer_to_str, loss_to_str, metrics_to_str
-from custom_architectures import get_architecture
+from models.weights_converter import name_based_partial_transfer_learning
+from custom_architectures import get_architecture, deserialize_keras2_model
 from custom_train_objects import (
     CheckpointManager,
     History,
@@ -199,7 +201,8 @@ class BaseModel(metaclass = ModelInstances):
         self._init_processing_functions()
 
         if os.path.exists(self.history_file.replace('history', 'historique')):
-            os.rename(self.history_file.replace('history', 'historique'), self.history_file)
+            if not os.path.exists(self.history_file):
+                os.rename(self.history_file.replace('history', 'historique'), self.history_file)
         self.__history  = History.load(self.history_file)
         self.checkpoint_manager = CheckpointManager(self, max_to_keep = max_to_keep)
         
@@ -311,6 +314,13 @@ class BaseModel(metaclass = ModelInstances):
     input_signature     = property(lambda self: get_signature(self.input_shape))
     output_signature    = property(lambda self: get_signature(self.output_shape))
     
+    unbatched_input_signature   = property(lambda self: tree.map_structure(
+        lambda s: TensorSpec(shape = s.shape[1:], dtype = s.dtype), self.input_signature
+    ))
+    unbatched_output_signature  = property(lambda self: tree.map_structure(
+        lambda s: TensorSpec(shape = s.shape[1:], dtype = s.dtype), self.output_signature
+    ))
+
     history = property(lambda self: self.__history)
     
     @cached_property
@@ -349,12 +359,16 @@ class BaseModel(metaclass = ModelInstances):
     def training_hparams_mapper(self):
         return {}
     
+    def _add_tracked_variable(self, tracked_type, name, value):
+        self._tracked[self._tracked_types[tracked_type]][name] = value
+        if isinstance(value, keras.Model): self.checkpoint_manager.add(name, value)
+        if name in {'model', 'loss', 'optimizer', 'metrics'}: name = '_' + name
+        return name, value
+
     def __setattr__(self, name, value):
         tracked_type = _get_tracked_type(value, tuple(self._tracked_types.keys()))
         if tracked_type:
-            self._tracked[self._tracked_types[tracked_type]][name] = value
-            if isinstance(value, keras.Model): self.checkpoint_manager.add(name, value)
-            if name in {'model', 'loss', 'optimizer', 'metrics'}: name = '_' + name
+            name, value = self._add_tracked_variable(tracked_type, name, value)
         
         super().__setattr__(name, value)
 
@@ -413,6 +427,10 @@ class BaseModel(metaclass = ModelInstances):
             logger.warning('The model is already compiled. To verwrite the current compilation, pass `overwrite = True` as `compile` argument')
             return
 
+        if 'metric' in kwargs:
+            metrics         = kwargs.pop('metric')
+            metrics_config  = kwargs.pop('metric_config', metrics_config)
+        
         if loss is None:    loss = getattr(self, '_default_loss', None)
         if metrics is None: metrics = getattr(self, '_default_metrics', [])
         if optimizer is None:   optimizer = getattr(self, '_default_optimizer', 'adam')
@@ -426,13 +444,18 @@ class BaseModel(metaclass = ModelInstances):
         if hasattr(loss, 'output_names'):
             self.loss = loss
             self.model.compute_loss     = self.compute_multi_loss
+            self.model._tracker.unlock()
             self.model.loss_metrics = {
                 name : keras.metrics.Mean(name = name)
                 for name in self.loss.output_names[1:]
             }
+            self.model._tracker.lock()
             loss = None # loss is not propagated to model compilation
         
         if not self.model.compiled or overwrite:
+            if not isinstance(metrics, list): metrics = [metrics]
+            if len(metrics) == 0: metrics = None
+            
             optimizer = get_optimizer(optimizer, ** optimizer_config)
             self.model.compile(optimizer = optimizer, loss = loss, metrics = metrics, ** kwargs)
         
@@ -494,6 +517,9 @@ class BaseModel(metaclass = ModelInstances):
         })
         return kwargs
     
+    def prepare_dataset(self, dataset, mode, ** kwargs):
+        return prepare_dataset(dataset, ** self.get_dataset_config(mode, ** kwargs))
+    
     def prepare_for_training(self,
                              x,
                              y = None,
@@ -520,10 +546,6 @@ class BaseModel(metaclass = ModelInstances):
 
                              ** kwargs
                             ):
-        train_config = self.get_dataset_config('train', ** kwargs)
-        valid_config = self.get_dataset_config('valid', ** kwargs)
-        for k in ('batch_size', 'shuffle'): kwargs.pop(k, None)
-        
         dataset = x if y is None else (x, y)
         if isinstance(dataset, dict) and 'train' in dataset:
             validation_data = dataset.get('valid', dataset.get('test', validation_data))
@@ -567,9 +589,10 @@ class BaseModel(metaclass = ModelInstances):
                 'valid' : summarize_dataset(valid_dataset, ** summary_kwargs)
             }
         
-        train_dataset = prepare_dataset(train_dataset, ** train_config)
-        valid_dataset = prepare_dataset(valid_dataset, ** valid_config)
-        
+        train_dataset = self.prepare_dataset(train_dataset, mode = 'train', ** kwargs)
+        valid_dataset = self.prepare_dataset(valid_dataset, mode = 'valid', ** kwargs)
+        for k in ('batch_size', 'shuffle'): kwargs.pop(k, None)
+
         if train_times > 1: train_dataset = train_dataset.repeat(train_times)
         if valid_times > 1: valid_dataset = valid_dataset.repeat(valid_times)
         
@@ -647,7 +670,7 @@ class BaseModel(metaclass = ModelInstances):
     def set_root(self, value):
         if os.path.exists(os.path.join(value, self.name)):
             raise RuntimeError('The directory `{}/{}` already exists'.format(value, name))
-        shutil.move(self.folder, os.path.join(value, self.name))
+        shutil.move(self.directory, os.path.join(value, self.name))
         self._root = root
 
     def save(self, ** kwargs):
@@ -683,28 +706,45 @@ class BaseModel(metaclass = ModelInstances):
     def restore_models(self, compile = True, ** kwargs):
         config = load_json(self.config_models_file)
         
+        _load_weights   = True
+        _update_config  = False
+        
         models = {}
         compile_config  = {}
         for key, model_config in config['models'].items():
-            filename = os.path.join(self.save_dir, f'{key}.keras')
-            
-            if not os.path.exists(filename):
-                filename = filename.replace('.keras', '.json')
+            filename = self.checkpoint_manager.loaded_checkpoint
+            if not filename: filename = os.path.join(self.save_dir, '{}.keras'.format(key))
             
             try:
-                if os.path.exists(filename):
+                if filename.endswith('.keras') and os.path.exists(filename):
                     logger.info('Loading `{}` from {}'.format(key, filename))
-                    load_fn = load_model if filename.endswith('.keras') else model_from_json
-                    model = load_fn(filename, ** kwargs)
-                else:
+                    model = load_model(filename)
+                    _load_weights = False
+                elif 'module' in model_config:
                     logger.info('Deserializing `{}` from config'.format(key))
                     model = keras.saving.deserialize_keras_object(model_config)
+                elif os.path.exists(filename.replace('.keras', '.json')):
+                    filename = filename.replace('.keras', '.json')
+                    
+                    logger.info('Loading `{}` from {}'.format(key, filename))
+                    with open(filename, 'r', encoding = 'utf-8') as file:
+                        json_config = file.read()
+                    model_config    = json.loads(json_config)
+                    
+                    if 'module' not in model_config:
+                        logger.info('Updating keras 2 config')
+                        _update_config = True
+                        model = deserialize_keras2_model(model_config)
+                    else:
+                        model = model_from_json(json_config)
                 
                 setattr(self, key, model)
                 logger.info('`{}` successfully restored !'.format(key))
+            
             except Exception as e:
                 logger.warning('Loading failed due to : {}'.format(e))
-                if model_config.get('module', '').startswith('custom_architectures'):
+                _update_config = True
+                if 'class_name' in model_config:
                     models[key] = {
                         'architecture'  : model_config['class_name'],
                         ** model_config['config']
@@ -718,16 +758,19 @@ class BaseModel(metaclass = ModelInstances):
         if models: self.build(** models, ** self.build_kwargs)
         
         for model, conf in compile_config.items():
-            getattr(self, model, ** conf)
-            
+            getattr(self, model, 'compile')(** conf)
+        
         if compile and config['losses']:
             if len(self.models) == 1 and '{}_optimizer'.format(key) in config['optimizers']:
                 for k in ('optimizers', 'losses', 'metrics'):
-                    config[k] = {ki.lstrip('{}_'.format(key)) : v for ki, v in config[k].items()}
+                    if len(config[k]) > 0:
+                        config[k] = list(config[k].values())[0]
+                config['losses'].get('loss_config', {}).pop('reduction', None)
             
             self.compile(** config['losses'], ** config['optimizers'], ** config['metrics'])
 
-        self.checkpoint_manager.load()
+        if _update_config:  self.save_models_config()
+        if _load_weights:   self.checkpoint_manager.load()
 
     @classmethod
     def restore(cls, name, force = False, ** kwargs):
@@ -751,10 +794,12 @@ class BaseModel(metaclass = ModelInstances):
             
             **Important note** : the pretrained model is loaded on CPU, so it is higly recommanded to restart the kernel before using the new instance to free memory
         """
-        from models import get_pretrained
-        
-        if is_model_name(pretrained):
-            with keras.device_scope('cpu'):
+        if isinstance(pretrained, str):
+            from models import get_pretrained
+            if not is_model_name(pretrained):
+                raise ValueError('The model `{}` is not available'.format(pretrained))
+                
+            with keras.device('cpu'):
                 pretrained = get_pretrained(pretrained)
         
         config = pretrained.get_config()
@@ -762,7 +807,7 @@ class BaseModel(metaclass = ModelInstances):
         
         instance = cls(max_to_keep = 1, ** config)
         
-        partial_transfer_learning(instance.model, pretrained.model)
+        name_based_partial_transfer_learning(instance.model, pretrained.model)
         
         instance.save()
         

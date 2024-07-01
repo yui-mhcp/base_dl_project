@@ -10,9 +10,8 @@
 # limitations under the License.
 
 import os
+import importlib
 
-from utils import import_objects
-
-globals().update(import_objects(
-    __package__.replace('.', os.path.sep), types = type
-))
+for module in os.listdir(__path__[0]):
+    if module.startswith(('_', '.')) or '_old' in module: continue
+    importlib.import_module(__package__ + '.' + module.replace('.py', ''))

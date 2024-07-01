@@ -121,7 +121,7 @@ class TanhDecayScheduler(CustomScheduler):
     def __init__(self, period = 2048, ** kwargs):
         super().__init__(** kwargs)
         self.period = K.convert_to_tensor(period, 'float32')
-        self.range  = maxval - minval
+        self.range  = self.maxval - self.minval
         
     def __call__(self, step):
         step = K.cast(step, 'float32')

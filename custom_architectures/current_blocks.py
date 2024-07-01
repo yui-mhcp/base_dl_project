@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import keras
+import inspect
 import logging
 import importlib
 
@@ -19,6 +20,8 @@ from keras import layers
 from custom_layers import get_activation
 
 logger  = logging.getLogger(__name__)
+
+_use_cudnn_lstm = False
 
 _keras_layers   = {k : v for k, v in vars(keras.layers).items() if isinstance(v, type)}
 logger.debug('Found {} layers in `keras.layers`'.format(len(_keras_layers)))
@@ -111,7 +114,7 @@ def get_pooling_layer(pool_type,
     assert input_dim in ('1d', '2d', '3d'), 'Invalid dimension {}'.format(input_dim)
     
     layer_name = pool_type.lower() + 'pooling' + input_dim
-    if global_pooling: layer_name = 'Global' + layer_name
+    if global_pooling: layer_name = 'global' + layer_name
     
     if use_mask:
         if 'masked' + layer_name not in _pooling_layers:
@@ -124,9 +127,11 @@ def get_pooling_layer(pool_type,
             tuple(_pooling_layers.keys()), layer_name
         ))
     
-    return _pooling_layers[layer_name](* args, ** kwargs)
+    layer  = _pooling_layers[layer_name]
+    kwargs = {k : v for k, v in kwargs.items() if k in inspect.signature(layer).parameters}
+    return layer(* args, ** kwargs)
 
-def get_flatten_layer(flatten_type, dim, ** kwargs):
+def get_flatten_layer(flatten_type, dim, use_cudnn = _use_cudnn_lstm, ** kwargs):
     """
         Returns a global flattening layer
         
@@ -151,12 +156,25 @@ def get_flatten_layer(flatten_type, dim, ** kwargs):
     elif flatten_type in ('max', 'avg', 'average'):
         return get_pooling_layer(flatten_type, dim, global_pooling = True, ** kwargs)
     else: # GRU / LSTM
-        layer = layers.LSTM(** kwargs, use_cudnn = False) if 'lstm' in flatten_type else layers.GRU(** kwargs)
+        layer = layers.LSTM(** kwargs) if 'lstm' in flatten_type else layers.GRU(** kwargs)
         if 'bi' in flatten_type:
             layer = layers.Bidirectional(layer)
-            for l in (layer.forward_layer, layer.backward_layer): l.use_cudnn = False
+        set_cudnn_lstm(layer, ** kwargs)
         
         return layer
+
+def set_cudnn_lstm(layer, use_cudnn = _use_cudnn_lstm, ** _):
+    if isinstance(layer, keras.Model):
+        _layers = layer._flatten_layers()
+    elif isinstance(layer, layers.Bidirectional):
+        _layers = (layer.forward_layer, layer.backward_layer)
+    else:
+        _layers = layer
+    
+    for l in _layers:
+        if hasattr(l, 'use_cudnn'):
+            l.use_cudnn = use_cudnn
+            if not use_cudnn: l.supports_jit = True
 
 def get_padding_layer(kernel_size, dim, *, dilation_rate = 1, use_mask = None, ** kwargs):
     if isinstance(kernel_size, (list, tuple)):
@@ -226,7 +244,7 @@ def _layer_bn(layer_class,
         Adds `n` times `layer_class` to `model` with `kwargs`, and possibly adds additional layers
         
         Arguments :
-            - model         : either `tf.Tensor` (for the Functional API) either `Sequential` instance
+            - model         : either `Tensor` (for the Functional API) either `Sequential` instance
             - layer_class    : the layer's class to add
             - n             : the number of `layer_class` to add consecutively
             - args / kwargs : configuration for the `layer_class`
@@ -250,7 +268,7 @@ def _layer_bn(layer_class,
             - residual_kwargs   : the kwargs for the residual layer
             
             - name  : the name to use for the `layer_class`
-        Returns : the updated `model` (if Sequential API) or the new `tf.Tensor`
+        Returns : the updated `model` (if Sequential API) or the new `Tensor`
     """
     assert bnorm in ('before', 'after_all', 'after', 'never'), 'Invalid `bnorm` : {}'.format(bnorm)
     

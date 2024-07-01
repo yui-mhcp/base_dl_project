@@ -54,7 +54,7 @@ class BaseClassificationModel(BaseModel):
     def get_label_id(self, data):
         if isinstance(data, (dict, pd.Series)): data = data['label']
         
-        if not ops.executing_eagerly():
+        if not ops.is_tensorflow_graph():
             import tensorflow as tf
             return self.lookup_table.lookup(tf.as_string(data))
         

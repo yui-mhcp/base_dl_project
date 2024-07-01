@@ -20,9 +20,8 @@ Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.m
 │   │   └── checkpoint_callback.py  : custom ModelCheckpoint sub-class working with the `CheckpointManager`
 │   ├── generators      : custom data generators (used in some projects)
 │   ├── losses          : losses loading
-│   │   └── text_loss.py    : custom loss for text generative models
+│   │   └── loss_with_multiple_outputs.py   : utlity class allowing losses to output additional metrics
 │   ├── metrics         : metrics loading
-│   │   └── text_accuracy.py  : custom metric for text generative models
 │   ├── optimizers      : optimizer loading
 │   │   └── lr_schedulers.py    : custom learning-rate schedulers
 │   └── checkpoint_manager.py   : handle model checkpoint management (inspired from `tf.train.CheckpointManager`)
@@ -34,6 +33,7 @@ Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.m
 │   │   └── mnist_classifier.py : example MNIST classifier
 │   ├── interfaces          : directories for interfaces' classes'
 │   │   ├── base_audio_model.py     : defines many audio processing functions
+│   │   ├── base_classification_model.py    : defines classification utilities
 │   │   ├── base_embedding_model.py : defines embedding-based utilities
 │   │   ├── base_image_model.py     : defines functions for image processing
 │   │   ├── base_model.py           : main BaseModel class
@@ -120,8 +120,7 @@ If you find this project useful in your work, please add this citation to give i
 ## Notes and references 
 
 Tutorials :
-- [tensorflow's tutorials](https://tensorflow.org/tutorials) : list of tensorflow's tutorials covering many topics. Some of my projects are inspired from these tutorials as well as the `tf.data.Dataset` pipeline. 
+- [tensorflow's tutorials](https://tensorflow.org/tutorials) : list of tensorflow's tutorials covering multiple topics. Some of the proposed projects / features are inspired from these tutorials (such as the `tf.data.Dataset` pipeline builder `prepare_dataset`). 
 
 Papers :
-- [1] [GENERALIZED END TO END LOSS FOR SPEAKER VERIFICATION](https://arxiv.org/pdf/1710.10467.pdf) : original `GE2E` loss paper
-- [2] [Attention is all you need](https://papers.nips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) : original paper introducing the `WarmupScheduler` and `Transformer` architecture. 
+- [Attention is all you need](https://papers.nips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) : original paper introducing the `WarmupScheduler` and `Transformer` architecture. 

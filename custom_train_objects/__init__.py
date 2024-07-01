@@ -12,7 +12,7 @@
 from .history import History
 from .checkpoint_manager import CheckpointManager
 
-#from .generators import *
+from .generators import *
 from .losses import _losses, add_loss, get_loss, print_losses
 from .metrics import _metrics, add_metric, get_metrics, print_metrics
 from .callbacks import _callbacks, get_callbacks, print_callbacks

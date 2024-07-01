@@ -13,6 +13,7 @@ import os
 import glob
 import json
 import keras
+import inspect
 
 from utils import import_objects, get_object, print_objects, partial, dispatch_wrapper
 from .simple_models import classifier, perceptron, simple_cnn
@@ -38,32 +39,65 @@ def get_architecture(architecture, * args, ** kwargs):
         _architectures, architecture, * args, print_name = 'architecture', ** kwargs
     )
 
+def get_custom_objects():
+    import custom_layers
+    
+    return {
+        'Sequential'    : keras.Sequential,
+        'Functional'    : keras.Model,
+        ** _architectures,
+        ** import_objects(custom_layers, classes = keras.layers.Layer),
+        ** import_objects(keras.layers, classes = keras.layers.Layer)
+    }
+
+def deserialize_keras2_model(config, safe_mode = True, replace_lambda_by_l2 = True):
+    _objects = get_custom_objects()
+    if config['class_name'] == 'Sequential':
+        def _update_keras2_config(config):
+            if isinstance(config, list):
+                return [_update_keras2_config(it) for it in config]
+            elif not isinstance(config, dict): return config
+
+            if 'class_name' in config and 'config' in config:
+                if config['class_name'] == 'Lambda':
+                    if replace_lambda_by_l2:
+                        return {
+                            'class_name'    : 'CustomActivation',
+                            'config'    : {'activation' : 'l2_norm'}
+                        }
+                    elif not safe_mode:
+                        keras.config.enable_unsafe_deserialization()
+                    
+
+                config = config.copy()
+                config['config'] = config['config'].copy()
+                if 'batch_input_shape' in config['config']:
+                    config['config']['batch_shape'] = config['config'].pop('batch_input_shape')
+
+                if config['class_name'] in _objects:
+                    params = inspect.signature(_objects[config['class_name']]).parameters
+                    if 'args' not in params:
+                        config['config'] = {
+                            k : v for k, v in config['config'].items() if k in params
+                        }
+
+                for k, v in config['config'].items():
+                    if 'initializer' in k and isinstance(v, dict) and 'class_name' in v:
+                        try:
+                            keras.initializers.get(v)
+                        except:
+                            config['config'][k] = {'class_name' : v['class_name'].lower(), 'config' : v['config']}
+                config['config'] = _update_keras2_config(config['config'])
+                return config
+            else:
+                return {k : _update_keras2_config(v) for k, v in config.items()}
+
+        config['config'] = _update_keras2_config(config['config'])
+
+    json_config = json.dumps(config)
+    with keras.utils.CustomObjectScope(_objects):
+        return keras.models.model_from_json(json_config)
+
 def print_architectures():
     print_objects(_architectures, 'model architectures')
 
-"""custom_objects = _activations.copy()
-_custom_architectures = {}
-
-#__load()
-
-_keras_architectures = {
-    'densenet121'       : partial(classifier, keras.applications.DenseNet121),
-    'densenet169'       : partial(classifier, keras.applications.DenseNet169),
-    'densenet201'       : partial(classifier, keras.applications.DenseNet201),
-    'inceptionresnetv2' : partial(classifier, keras.applications.InceptionResNetV2),
-    'inceptionv3'       : partial(classifier, keras.applications.InceptionV3),
-    'mobilenet'         : partial(classifier, keras.applications.MobileNet),
-    'mobilenetv2'       : partial(classifier, keras.applications.MobileNetV2),
-    'nasnetlarge'       : partial(classifier, keras.applications.NASNetLarge),
-    'resnet50'          : partial(classifier, keras.applications.ResNet50),
-    'resnet50v2'        : partial(classifier, keras.applications.ResNet50V2),
-    'resnet101'         : partial(classifier, keras.applications.ResNet101),
-    'resnet101v2'       : partial(classifier, keras.applications.ResNet101V2),
-    'resnet152'         : partial(classifier, keras.applications.ResNet152),
-    'resnet152v2'       : partial(classifier, keras.applications.ResNet152V2),
-    'vgg16'             : partial(classifier, keras.applications.VGG16),
-    'vgg19'             : partial(classifier, keras.applications.VGG19),
-    'xception'          : partial(classifier, keras.applications.Xception)
-}
-
-architectures = {**_keras_architectures, **_custom_architectures}"""

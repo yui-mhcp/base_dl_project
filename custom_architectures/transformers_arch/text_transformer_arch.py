@@ -13,6 +13,8 @@ import keras
 import logging
 import keras.ops as K
 
+from functools import partial
+
 from loggers import timer
 from utils.hparams import HParams
 from custom_layers import CustomEmbedding
@@ -81,6 +83,7 @@ class TransformerTokenEmbedding(keras.layers.Layer):
         for attr_name in self._attr_to_set:
             setattr(self, attr_name, self.hparams[attr_name])
         
+        if self.repeat_position == -1: self.repeat_position = None
         self._max_input_length  = self.hparams.max_input_length
         self.embedding_factor   = K.sqrt(float(embedding_dim)) if self.scale_embeddings else None
         
@@ -164,7 +167,7 @@ class TransformerTokenEmbedding(keras.layers.Layer):
     def embed_positions(self, seq_len, offset = None):
         if self.pos_embedding_layer is None: return 0
         
-        if self.repeat_position is not None:
+        if self.repeat_position:
             position_ids = K.repeat(
                 K.arange(seq_len // self.repeat_position + 1), self.repeat_position
             )[:seq_len]
@@ -204,7 +207,7 @@ class TransformerTokenEmbedding(keras.layers.Layer):
             import tensorflow as tf
             if tokens is not None:
                 tf.print("Tokens shape :", tf.shape(tokens))
-            tf.print("Positional offset :", offset)
+            tf.print("Positional offset :", tf.reshape(offset, [-1]))
         
         if tokens is not None:
             token_embedded = self.embed_tokens(tokens)
@@ -341,7 +344,7 @@ class TextTransformerBlock(TransformerBlock):
                 tokens, mask = mask, pad_value = self.pad_token, dtype = 'bool'
             )
 
-        if offset is None and initial_state: offset = lengths - 1
+        if offset is None and initial_state: offset = lengths[:, None] - 1
         
         embedded = self.embeddings(
             tokens,
@@ -365,7 +368,8 @@ class TextTransformerBlock(TransformerBlock):
         
         return output
 
-    infer = infer_method
+    def infer(self, * args, ** kwargs):
+        return infer_method(self, * args, is_transformer = True, ** kwargs)
     
     def transfer_weights(self, * args, ** kwargs):
         kwargs.setdefault('skip_layers', ('sos_token', 'eos_token', 'pad_token'))

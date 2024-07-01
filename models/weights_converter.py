@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import re
 import sys
 import enum
@@ -83,6 +84,11 @@ _attn_split     = {
     }
 }
 
+_int_distance = {
+    str(i) : {str(j) : abs(i - j) / 10. for j in range(10)}
+    for i in range(10)
+}
+
 def _is_torch_module(x):
     if 'torch' not in sys.modules: return False
     import keras
@@ -152,7 +158,15 @@ def get_layer_name(name):
     if '/' not in name: return name
     return '/'.join(name.split('/')[:-1])
 
-def get_layers_mapping(model, transpose = False, to_numpy = True, skip_root = False, is_torch = False, ** _):
+def get_layers_mapping(model,
+                       
+                       transpose    = False,
+                       to_numpy     = True,
+                       skip_root    = False,
+                       
+                       source   = None,
+                       ** _
+                      ):
     """
         Returns a dict {layer_name : list_of_vars}
         A layer is identified by removing the last part from its name
@@ -175,7 +189,8 @@ def get_layers_mapping(model, transpose = False, to_numpy = True, skip_root = Fa
             key = get_layer_name(name)
             layers.setdefault(key, []).append(var)
     
-    if transpose: layers = transpose_weights(layers, is_torch)
+    if source:      layers = arrange_weights(layers, source, target = 'keras')
+    if transpose:   layers = transpose_weights(layers)
     
     return layers
 
@@ -192,16 +207,13 @@ def print_vars(model, ** kwargs):
     print(msg)
 
 
-def transpose_weights(weights, is_torch = None):
+def transpose_weights(weights):
     """ Returns the transposed version of `weights` (for pt / tf convertion) """
     if isinstance(weights, dict):
-        return {k : transpose_weights(v, is_torch) for k, v in weights.items()}
+        return {k : transpose_weights(v) for k, v in weights.items()}
     
     if isinstance(weights, list):
-        assert is_torch is not None, 'You must specify `is_torch` !'
-        weights = arrange_torch_weights(weights) if is_torch else arrange_keras_weights(weights)
         return [transpose_weights(w) for w in weights]
-    
     
     if len(weights.shape) <= 1:
         return weights
@@ -216,7 +228,33 @@ def transpose_weights(weights, is_torch = None):
     else:
         raise ValueError("Unknown weights shape : {}".format(weights.shape))
 
-def arrange_torch_weights(weights):
+def arrange_weights(weights, source, target = 'keras'):
+    if source == target: return weights
+    
+    if isinstance(weights, dict):
+        rearranged = {}
+        for k, w in weights.items():
+            new_v = arrange_weights(w, source, target)
+            if not isinstance(new_v, dict):
+                rearranged[k] = new_v
+            else:
+                rearranged.update({'{}-{}'.format(k, ki) : vi for ki, vi in new_v.items()})
+
+        return rearranged
+    
+    if target == 'torch':
+        if source == 'saved_model':
+            weights = arrange_saved_model_weights(weights)
+        return arrange_keras_weights(weights)
+    elif target == 'keras':
+        if source == 'torch':
+            return arrange_torch_weights(weights)
+        elif source == 'saved_model':
+            return arrange_saved_model_weights(weights)
+    else:
+        raise ValueError('Unsupported target format : {}'.format(target))
+
+def arrange_torch_weights(weights, expand_bidirectional = True):
     if len(weights) == 2:
         weights = sorted(weights, key = lambda w: len(w.shape), reverse = True)
     elif len(weights) < 4:
@@ -226,7 +264,13 @@ def arrange_torch_weights(weights):
     elif len(weights) == 5:
         weights = weights[:4]
     elif len(weights) == 8:
-        weights = weights[:2] + [weights[2] + weights[3]] + weights[4:6] + [weights[6] + weights[7]]
+        if expand_bidirectional:
+            return {
+                'forward'   : weights[:2] + [weights[2] + weights[3]],
+                'backward'  : weights[4:6] + [weights[6] + weights[7]]
+            }
+        else:
+            weights = weights[:2] + [weights[2] + weights[3]] + weights[4:6] + [weights[6] + weights[7]]
     else:
         raise ValueError("Unknown weights length : {}\n  Shapes : {}".format(
             len(weights), [tuple(v.shape) for v in weights]
@@ -246,6 +290,15 @@ def arrange_keras_weights(weights):
     
     return weights
 
+def arrange_saved_model_weights(weights):
+    if len(weights) < 4:
+        return sorted(weights, key = lambda w: len(w.shape), reverse = True)
+    elif len(weights) == 4:
+        return [weights[1], weights[0]] + weights[2:]
+    raise ValueError("Unknown weights length : {}\n  Shapes : {}".format(
+        len(weights), [tuple(v.shape) for v in weights]
+    ))
+
 def find_layers_mapping(model,
                         pretrained,
                         *,
@@ -254,10 +307,11 @@ def find_layers_mapping(model,
                         transforms  = {},
                         skip_layers = None,
                         
-                        is_torch    = False,
+                        source  = None,
                         transpose   = False,
                         partial     = False,
                         
+                        replacement_cost    = _int_distance,
                         default_replace_cost    = 1.5,
                         
                         tqdm = lambda x: x,
@@ -300,7 +354,7 @@ def find_layers_mapping(model,
     }
     logger.debug('# model layers      : {}'.format(len(model_layers)))
     pretrained_layers = get_layers(
-        pretrained, transpose = transpose, is_torch = is_torch, ** kwargs
+        pretrained, transpose = transpose, source = source, ** kwargs
     ).copy()
     logger.debug('# pretrained layers : {}'.format(len(pretrained_layers)))
 
@@ -323,14 +377,23 @@ def find_layers_mapping(model,
         for k, v in pretrained_layers.items()
     }
 
+    def _remove_candidate(name):
+        not_mapped.remove(name)
+        for l in _layers[:i]:
+            if len(mapping.get(l, [])) > 1 and name in mapping[l]:
+                mapping[l].remove(name)
+                if len(mapping[l]) == 1: _remove_candidate(mapping[l][0])
+    
+    _layers = list(model_layers.keys())
     mapping = {}
-    for l1, shape in tqdm(model_layers.items()):
+    for i, l1 in enumerate(tqdm(_layers)):
+        shape = model_layers[l1]
         if skip_layers and any(re.search(s, l1) is not None for s in skip_layers):
             continue
         
         if l1 in not_mapped:
             mapping[l1] = [l1]
-            not_mapped.remove(l1)
+            _remove_candidate(l1)
             continue
 
         bests, score = [], float('inf')
@@ -339,7 +402,11 @@ def find_layers_mapping(model,
             if shape != pretrained_shapes[l2]: continue
 
             s = edit_distance(
-                l1, l2, normalize = False, default_replace_cost = default_replace_cost
+                l1, l2,
+                normalize   = False,
+                replacement_cost    = replacement_cost,
+                default_replace_cost    = default_replace_cost,
+                ** kwargs
             )
             if s == score:
                 bests.append(l2)
@@ -348,105 +415,27 @@ def find_layers_mapping(model,
                 score = s
         
         mapping[l1] = bests
-        if len(bests) == 1: not_mapped.remove(bests[0])
-    
+        if len(bests) == 1: _remove_candidate(bests[0])
+
     return mapping, pretrained_layers
 
-""" Pytorch to Tensorflow convertion """
-
-def get_pt_layers(pt_model, ** kwargs):
-    return get_layers_mapping(pt_model, sep = '.', ** kwargs)
-
-def pt_convert_layer_weights(layer_weights, name):
-    new_weights = []
-    if len(layer_weights) == 2:
-        new_weights = sorted(layer_weights, key = lambda w: len(w.shape), reverse = True)
-    elif len(layer_weights) < 4:
-        new_weights = layer_weights
-    elif len(layer_weights) == 4:
-        new_weights = layer_weights[:2] + [layer_weights[2] + layer_weights[3]]
-    elif len(layer_weights) == 5:
-        new_weights = layer_weights[:4]
-    elif len(layer_weights) == 8:
-        new_weights = layer_weights[:2] + [layer_weights[2] + layer_weights[3]]
-        new_weights += layer_weights[4:6] + [layer_weights[6] + layer_weights[7]]
-    else:
-        raise ValueError("Unknown weights length for variable {} : {}\n  Shapes : {}".format(
-            name, len(layer_weights), [tuple(v.shape) for v in layer_weights]
-        ))
+def load_saved_model_variables(path):
+    import tensorflow as tf
     
-    return [transpose_weights(w) for w in new_weights]
+    if os.path.isdir(path): path = tf.train.latest_checkpoint(path)
+    names   = tf.train.list_variables(path)
+    weights = {n : tf.train.load_variable(path, n) for n, _ in names}
+    weights = {k : v for k, v in weights.items() if isinstance(v, np.ndarray) and v.ndim > 0}
+    logger.info('Loaded {} variables from {}'.format(len(weights), path))
+    return {
+        k.replace('/.ATTRIBUTES/VARIABLE_VALUE', '') : v for k, v in weights.items()
+    }
 
-def get_pt_variables(pt_model, verbose = False):
-    pt_layers = get_pt_layers(pt_model) if not isinstance(pt_model, dict) else pt_model
-    converted_weights = []
-    for layer_name, layer_variables in pt_layers.items():
-        converted_variables = pt_convert_layer_weights(layer_variables, layer_name) if 'embedding' not in layer_name else layer_variables
-        converted_weights += converted_variables
-        
-        logger.log(logging.INFO if verbose else logging.DEBUG, "Layer : {} \t {} \t {}".format(
-            layer_name, 
-            [tuple(v.shape) for v in layer_variables],
-            [tuple(v.shape) for v in converted_variables],
-        ))
-    return converted_weights
-
-def pt_convert_model_weights(pt_model, tf_model, verbose = False):
-    converted_weights = get_pt_variables(pt_model, verbose = verbose)
-    
-    partial_transfer_learning(tf_model, converted_weights, verbose = verbose)
-    logger.info("Weights converted successfully !")
-    
-    
-""" Tensorflow to Pytorch converter """
-
-def get_tf_layers(tf_model, ** kwargs):
-    return get_layers_mapping(tf_model, sep = '/', ** kwargs)
-
-def tf_convert_layer_weights(layer_weights, name = None):
-    new_weights = []
-    if len(layer_weights) < 3 or len(layer_weights) == 4:
-        new_weights = layer_weights
-    elif len(layer_weights) == 3:
-        new_weights = layer_weights[:2] + [layer_weights[2] / 2., layer_weights[2] / 2.]
-    else:
-        raise ValueError("Unknown weights length : {}\n  Shapes : {}".format(len(layer_weights), [tuple(v.shape) for v in layer_weights]))
-    
-    return [transpose_weights(w) for w in new_weights]
-
-
-def tf_convert_model_weights(tf_model, pt_model, verbose = False):
-    import torch
-    
-    pt_layers = pt_model.state_dict()
-    tf_layers = get_tf_layers(tf_model)
-    converted_weights = []
-    for layer_name, layer_variables in tf_layers.items():
-        converted_variables = tf_convert_layer_weights(layer_variables) if 'embedding' not in layer_name else layer_variables
-        converted_weights += converted_variables
-        
-        logger.log(logging.INFO if verbose else logging.DEBUG, "Layer : {} \t {} \t {}".format(
-            layer_name, 
-            [tuple(v.shape) for v in layer_variables],
-            [tuple(v.shape) for v in converted_variables],
-        ))
-    
-    tf_idx = 0
-    for i, (pt_name, pt_weights) in enumerate(pt_layers.items()):
-        if len(pt_weights.shape) == 0: continue
-        
-        pt_weights.data = torch.from_numpy(converted_weights[tf_idx])
-        tf_idx += 1
-    
-    pt_model.load_state_dict(pt_layers)
-    logger.info("Weights converted successfully !")
-
-""" Partial transfer learning """
 
 def name_based_partial_transfer_learning(target_model,
                                          pretrained_model,
                                          
-                                         from_torch = None,
+                                         source = None,
                                          transpose  = 'auto',
                                          
                                          partial_transfer      = True,
@@ -535,14 +524,14 @@ def name_based_partial_transfer_learning(target_model,
     sampling_mode   = get_enum_item(str(sampling_mode), PartialSampling)
     partial_initializer = get_enum_item(str(partial_initializer), PartialInitializer)
     
-    if from_torch is None:  from_torch = _is_torch_module(pretrained_model)
-    if transpose == 'auto': transpose  = from_torch
+    if source is None:      source = 'torch' if _is_torch_module(pretrained_model) else 'keras'
+    if transpose == 'auto': transpose  = source == 'torch'
     
     mapping, pretrained_layers = find_layers_mapping(
         target_model,
         pretrained_model,
+        source  = source,
         transpose   = transpose,
-        is_torch    = from_torch,
         partial     = True,
         tqdm    = tqdm,
         ** kwargs
@@ -569,7 +558,7 @@ def name_based_partial_transfer_learning(target_model,
     mapping_infos   = {}
     new_weights     = []
     for i, (name, v) in enumerate(target_variables.items()):
-        var_layer   = get_layer_name(name)
+        var_layer   = normalize_var_name(get_layer_name(name))
 
         mapping_infos[name] = {'layer' : var_layer, 'shape' : tuple(v.shape)}
 

@@ -40,7 +40,7 @@ HParamsConvBN   = HParams(
     dilation_rate   = 1,
     kernel_initializer  = 'glorot_uniform',
     bias_initializer    = 'zeros',
-    use_manual_padding  = False,
+    use_manual_padding  = True,
     
     activation      = 'relu',
     drop_rate       = 0.25,
@@ -244,6 +244,8 @@ def simple_cnn(input_shape  = None,
         x = add_layer(x, get_flatten_layer(
             hparams.flatten_type, dim, ** hparams.flatten_kwargs
         ))
+        if not hparams.dense_as_final and hparams.final_activation:
+            x = add_layer(x, get_activation(hparams.final_activation))
         
     elif len(input_shape) == 3 and hparams.dense_as_final:
         seq_len = -1 if input_shape[0] is None else x.shape[1]

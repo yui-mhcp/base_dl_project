@@ -407,6 +407,7 @@ class TransformerLayer(keras.layers.Layer):
         self.dropout    = keras.layers.Dropout(self.hparams.drop_rate)
     
     def build(self, input_shape):
+        if self.built: return
         super().build(input_shape)
         self.attention.build(input_shape)
         if self.enc_attention is not None:
@@ -616,6 +617,7 @@ class TransformerBlock(keras.Model):
         ) if self.hparams.normalize_output else None
     
     def build(self, input_shape):
+        if self.built: return
         super(TransformerBlock, self).build(input_shape)
         for layer in self.transformer_layers: layer.build((None, None, self.embedding_dim))
         if self.norm is not None: self.norm.build((None, None, self.embedding_dim))
@@ -938,6 +940,7 @@ class Transformer(keras.Model):
         self.decoder = decoder_wrapper(decoder, ** self.hparams.get_config(prefix = 'decoder'))
     
     def build(self, input_shape):
+        if self.built: return
         super().build(input_shape)
         enc_shape, dec_shape = input_shape if isinstance(input_shape[0], (list, tuple)) else (input_shape, input_shape)
         self.encoder.build(enc_shape)
@@ -1052,13 +1055,16 @@ class Transformer(keras.Model):
     
     @timer(name = 'Transformer inference')
     @graph_compile(
-        reduce_retracing = True, support_xla = True, follow_type_hints = True, cast_kwargs = True,
+        reduce_retracing = True, support_xla = True, follow_type_hints = True, cast_kwargs = False,
         prepare_for_xla = lambda self, * args, ** kwargs: (self.prepare_for_xla(
             * args, ** kwargs
         ) if hasattr(self, 'prepare_for_xla') else ((self, ) + args, kwargs))
     )
     def infer(self,
               inputs    : TensorSpec(),
+              *,
+              
+              tokens    : TensorSpec(shape = (None, None), dtype = 'int32') = None,
               initial_state : TensorSpec() = None,
 
               enc_padding_mask  : TensorSpec() = None,
@@ -1092,10 +1098,11 @@ class Transformer(keras.Model):
         )
         encoded, mask = encoder_outputs.output, encoder_outputs.mask
         if flatten:
-            encoded = tf.boolean_mask(
-                tf.reshape(encoded, [-1, self.encoder.embedding_dim]),
-                tf.reshape(mask, [-1])
-            )[tf.newaxis]
+            raise NotImplementedErr()
+            encoded = K.boolean_mask(
+                K.reshape(encoded, [-1, self.encoder.embedding_dim]),
+                K.reshape(mask, [-1])
+            )[None]
             if flat_length is not None: encoded = encoded[:, : flat_length]
             mask    = None
 

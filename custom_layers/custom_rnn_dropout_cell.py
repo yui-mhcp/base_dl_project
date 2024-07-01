@@ -15,10 +15,19 @@ import keras.ops as K
 from keras import tree
 
 class CustomRNNDropoutCell:
-    def init_dropout_mask(self, inputs, state = None, training = None):
-        if not training: return
+    def init_dropout_mask(self, 
+                          inputs    = None,
+                          state     = None,
+                          
+                          batch_size    = None,
+                          seq_length    = None,
+                          
+                          training  = None
+                         ):
+        if not training or keras.backend.backend() == 'tensorflow': return
         
-        batch_size, seq_length = K.shape(inputs)[0], K.shape(inputs)[1]
+        if batch_size is None or seq_length is None:
+            batch_size, seq_length = K.shape(inputs)[0], K.shape(inputs)[1]
         
         if not hasattr(self, '_dropout_mask'):
             self._dropout_mask = None
@@ -48,6 +57,8 @@ class CustomRNNDropoutCell:
             
 
     def reset_dropout_mask(self):
+        if keras.backend.backend() == 'tensorflow': return
+        
         self._dropout_mask = None
         for layer in self._layers:
             if hasattr(layer, 'get_dropout_mask'):
@@ -62,8 +73,10 @@ class CustomRNNDropoutCell:
 
     def dropout(self, inputs, step, training, name = None):
         if not training: return inputs
+        elif keras.backend.backend() == 'tensorflow':
+            return keras.random.dropout(inputs, self.drop_rate, seed = self.seed_generator)
         
-        step = step[0, 0]
+        if len(K.shape(step)) == 2: step = step[0, 0]
         if getattr(self, '_dropout_mask', None) is None:
             raise RuntimeError('You must call `self.init_dropout_mask` before the loop')
         
