@@ -9,4 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .mnist_classifier import MNISTClassifier
+import os
+
+from utils import import_objects
+
+globals().update(import_objects(
+    __package__.replace('.', os.path.sep), allow_functions = False
+))
