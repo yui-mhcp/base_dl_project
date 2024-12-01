@@ -32,6 +32,7 @@ Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.m
 │   ├── classification      : example for BaseModel subclassing
 │   │   └── mnist_classifier.py : example MNIST classifier
 │   ├── interfaces          : directories for interfaces' classes'
+│   │   ├── runtime             : an experimental module to support custom inference runtimes
 │   │   ├── base_audio_model.py     : defines many audio processing functions
 │   │   ├── base_classification_model.py    : defines classification utilities
 │   │   ├── base_embedding_model.py : defines embedding-based utilities
@@ -54,12 +55,7 @@ All projects also contain a `README.md` file, that provides general information 
 
 ## Installation and usage
 
-1. Clone this repository : `git clone https://github.com/yui-mhcp/base_dl_project.git`
-2. Go to the root of this repository : `cd base_dl_project`
-3. Install requirements\* : `pip install -r requirements.txt`
-4. Open an example notebook and follow the instructions !
-
-**For audio processing** : you should also install `ffmpeg` if you want to use some audio processing functions.
+Check [this installagion guide](https://github.com/yui-mhcp/yui-mhcp/blob/main/INSTALLATION.md) for the step-by-step instructions !
 
 ## TO-DO list
 
