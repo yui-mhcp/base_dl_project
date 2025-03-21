@@ -1,66 +1,72 @@
 # :yum: Base Deep Learning project
 
-This repository provides a simple and comprehensive example to use the `BaseModel` interface. This allows to easily create new models to experiment, train, and use the trained model. The primary objective is to facilitate the learning and comprehension of Deep Learning (DL), and provide convenient methods to make your project easier !
+This repository provides a simple and comprehensive example to use the `BaseModel` interface. This allows to easily create new models to experiment, train, and use the trained model. The primary objective is to facilitate the learning and comprehension of Deep Learning (DL), and provide convenient methods to make your project easier!
 
-Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.md) file to have a global overview of the latest modifications ! :yum:
+Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.md) file to have a global overview of the latest modifications! :yum:
 
 ## Project structure
 
 ```bash
-├── custom_architectures    : utilities to load custom architectures
-│   ├── transformers_arch       : main directory defining the Transformers architectures
-│   │   ├── {...}_arch.py           : concrete transformer model, built upon the generic transformer blocks
-│   │   ├── text_transformer_arch.py    : defines the main Transformers blocks
-│   │   └── transformer_arch.py         : defines features for text-based Transformers
-│   ├── current_blocks.py   : defines some blocks that are currently used (e.g., Conv + BN + ReLU)
-│   └── simple_models.py    : defines some classical models such as CNN / RNN / MLP and siamese
-├── custom_layers       : directory for the custom layers (such as MHA / custom activations)
+├── architectures            : utilities for model architectures
+│   ├── layers                   : custom layer implementations
+│   ├── transformers             : transformer architecture implementations
+│   │   ├── {...}_arch.py            : concrete transformer models built upon generic transformer blocks
+│   │   ├── text_transformer_arch.py : defines the main Transformers blocks
+│   │   └── transformer_arch.py      : defines features for text-based Transformers
+│   ├── current_blocks.py        : defines common blocks (e.g., Conv + BN + ReLU)
+│   ├── generation_utils.py      : utilities for text and sequence generation
+│   ├── hparams.py               : hyperparameter management
+│   └── simple_models.py         : defines classical models such as CNN / RNN / MLP and siamese
 ├── custom_train_objects    : custom objects used in training / testing
-│   ├── callbacks       : callbacks loading
-│   │   └── checkpoint_callback.py  : custom ModelCheckpoint sub-class working with the `CheckpointManager`
-│   ├── generators      : custom data generators (used in some projects)
-│   ├── losses          : losses loading
-│   │   └── loss_with_multiple_outputs.py   : utlity class allowing losses to output additional metrics
-│   ├── metrics         : metrics loading
-│   ├── optimizers      : optimizer loading
-│   │   └── lr_schedulers.py    : custom learning-rate schedulers
-│   └── checkpoint_manager.py   : handle model checkpoint management (inspired from `tf.train.CheckpointManager`)
-│   └── history.py      : main History class to compute training statistics / track config
-├── docker              : directory for the `docker` scripts
-├── loggers             : *
-├── models              : main directory for model's classes'
-│   ├── classification      : example for BaseModel subclassing
-│   │   └── mnist_classifier.py : example MNIST classifier
-│   ├── interfaces          : directories for interfaces' classes'
-│   │   ├── runtime             : an experimental module to support custom inference runtimes
-│   │   ├── base_audio_model.py     : defines many audio processing functions
-│   │   ├── base_classification_model.py    : defines classification utilities
-│   │   ├── base_embedding_model.py : defines embedding-based utilities
-│   │   ├── base_image_model.py     : defines functions for image processing
-│   │   ├── base_model.py           : main BaseModel class
-│   │   └── base_text_model.py      : defines functions for text encoding / decoding / processing
-│   ├── saving.py           : utilities functions on models
-│   ├── model_utils.py      : utilities functions on models
-│   └── weights_converter.py    : utilities to convert weights from 2 different models
-├── pretrained_models   : main directory where all trained models are saved
-├── unitests        : *
-├── utils           : *
-├── example_classifier.ipynb
-└── example_classifier_2.ipynb
+│   ├── callbacks               : callbacks loading and implementations
+│   │   ├── checkpoint_callback.py  : custom ModelCheckpoint sub-class working with the `CheckpointManager`
+│   │   └── history_callback.py     : callback for tracking training history
+│   ├── generators              : custom data generators
+│   ├── losses                  : loss functions
+│   │   └── loss_with_multiple_outputs.py   : utility class allowing losses to output additional metrics
+│   ├── metrics                 : metrics loading and implementations
+│   │   └── text_accuracy.py         : accuracy metrics for text evaluation
+│   ├── optimizers              : optimizer loading
+│   │   └── lr_schedulers.py         : custom learning-rate schedulers
+│   ├── checkpoint_manager.py   : handle model checkpoint management (inspired from `tf.train.CheckpointManager`)
+│   └── history.py              : main History class to compute training statistics / track config
+├── loggers                 : logging utilities*
+├── models                  : main directory for model classes
+│   ├── example                 : example implementations
+│   │   └── mnist_classifier.py     : example MNIST classifier
+│   ├── interfaces              : directories for interfaces classes
+│   │   ├── base_audio_model.py        : defines audio processing functions
+│   │   ├── base_classification_model.py : defines classification utilities
+│   │   ├── base_image_model.py        : defines functions for image processing
+│   │   ├── base_model.py              : main BaseModel class
+│   │   └── base_text_model.py         : defines functions for text encoding/decoding/processing
+│   └── weights_converter.py    : utilities to convert weights between different models
+├── tests                   : unit and integration tests*
+├── utils                   : utility functions*
+├── example_classifier.ipynb    : jupyter notebook with basic classifier example
+├── LICENCE                     : project license file
+├── README.md                   : this file
+└── requirements.txt            : required packages
 ```
 
-\* Check [the data processing repository](https://github.com/yui-mhcp/data_processing) for more information on these modules. 
+\* Check [the data processing repository](https://github.com/yui-mhcp/data_processing) for more information on these modules.
 
-All projects also contain a `README.md` file, that provides general information on the project features / usage, some links (tutorials / projects) related to the topic, and some `example_*.jpynb` notebooks for practical usage examples. 
+All projects also contain a `README.md` file, that provides general information on the project features/usage, some links (tutorials/projects) related to the topic, and some `example_*.ipynb` notebooks for practical usage examples.
 
 ## Installation and usage
 
-Check [this installagion guide](https://github.com/yui-mhcp/yui-mhcp/blob/main/INSTALLATION.md) for the step-by-step instructions !
+See [the installation guide](https://github.com/yui-mhcp/blob/master/INSTALLATION.md) for a step-by-step installation :smile:
+
+Here is a summary of the installation procedure, if you have a working python environment :
+1. Clone this repository: `git clone https://github.com/yui-mhcp/base_dl_project.git`
+2. Go to the root of this repository: `cd base_dl_project`
+3. Install requirements\*: `pip install -r requirements.txt`
+4. Open an example notebook and follow the instructions!
 
 ## TO-DO list
 
 - [x] Make the TO-DO list.
-- [x] Make examples for dataset loading / processing (moved in the `data_processing` project).
+- [x] Make examples for dataset loading/processing (moved in the `data_processing` project).
 - [x] Make examples for `BaseModel` subclassing.
 - [x] Comment the code.
 - [ ] Multi-GPU support.
@@ -76,32 +82,66 @@ Check [this installagion guide](https://github.com/yui-mhcp/yui-mhcp/blob/main/I
     - [x] Make a custom `CheckpointManager` to support all backends
     - [x] Make the `History` and `CheckpointManager` classes compatible with `fit`
     - [x] Improve the processing pipeline methods
-    - [x] Support all keras losses / optimizers / callbacks / metrics in the `compile` and `fit` methods
+    - [x] Support all keras losses/optimizers/callbacks/metrics in the `compile` and `fit` methods
     - [ ] Add the `PredictorCalback` feature
     - [ ] Convert the available datasets to be compatible with the new `utils/datasets` module
-    - [ ] Make the `evaluate` method compatible with the processing pipeline / `History` class etc.
-- [ ] Make clear tutorials to extend the base project (e.g., add new architectures / layers / losses / ...)
-- [ ] Add more references to start learning ML / DL
+    - [ ] Make the `evaluate` method compatible with the processing pipeline/`History` class etc.
+- [ ] Make clear tutorials to extend the base project (e.g., add new architectures/layers/losses/...)
+- [ ] Add more references to start learning ML/DL
+
+## Tutorials and Learning Resources
+
+### Getting Started with Deep Learning
+
+1. **Online Courses**
+   - [Introduction to Deep Learning](https://www.tensorflow.org/resources/learn-ml) by TensorFlow
+   - [Fast.ai Practical Deep Learning for Coders](https://course.fast.ai/) - Hands-on approach
+
+2. **Books**
+   - [Deep Learning](https://www.deeplearningbook.org/) by Ian Goodfellow, Yoshua Bengio, and Aaron Courville
+   - [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781492032632/) by Aurélien Géron
+   - [Deep Learning with Python](https://www.manning.com/books/deep-learning-with-python) by François Chollet
+
+### Framework-Specific Resources
+
+1. **TensorFlow/Keras**
+   - [TensorFlow Tutorials](https://www.tensorflow.org/tutorials)
+   - [Keras Documentation](https://keras.io/guides/)
+   - [TensorFlow Developer Certificate](https://www.tensorflow.org/certificate)
+
+2. **PyTorch**
+   - [PyTorch Tutorials](https://pytorch.org/tutorials/)
+   - [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) : High-level interface for PyTorch
+
+### Advanced Topics
+
+1. **Computer Vision**
+   - [CS231n: Convolutional Neural Networks for Visual Recognition](http://cs231n.stanford.edu/)
+   - [PyImageSearch](https://pyimagesearch.com/blog/) : Practical computer vision tutorials
+
+2. **Natural Language Processing**
+   - [CS224n: Natural Language Processing with Deep Learning](http://web.stanford.edu/class/cs224n/)
+   - [Hugging Face Course](https://huggingface.co/course)
+
+3. **Reinforcement Learning**
+   - [Deep Reinforcement Learning Course](https://huggingface.co/learn/deep-rl-course/unit0/introduction) by Hugging Face
+   - [Spinning Up in Deep RL](https://spinningup.openai.com/) by OpenAI
 
 ## Contacts and licence
 
-Contacts :
-- **Mail** : `yui-mhcp@tutanota.com`
-- **[Discord](https://discord.com)** : yui0732
+Contacts:
+- **Mail**: `yui-mhcp@tutanota.com`
+- **[Discord](https://discord.com)**: yui0732
 
-### Terms of use
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). See the [LICENSE](LICENSE) file for details.
 
-The goal of these projects is to support and advance education and research in Deep Learning technology. To facilitate this, all associated code is made available under the [GNU Affero General Public License (AGPL) v3](AGPLv3.licence), supplemented by a clause that prohibits commercial use (cf the [LICENCE](LICENCE) file).
+This license allows you to use, modify, and distribute the code, as long as you include the original copyright and license notice in any copy of the software/source. Additionally, if you modify the code and distribute it, or run it on a server as a service, you must make your modified version available under the same license.
 
-These projects are released as "free software", allowing you to freely use, modify, deploy, and share the software, provided you adhere to the terms of the license. While the software is freely available, it is not public domain and retains copyright protection. The license conditions are designed to ensure that every user can utilize and modify any version of the code for their own educational and research projects.
+For more information about the AGPL-3.0 license, please visit [the official website](https://www.gnu.org/licenses/agpl-3.0.html)
 
-If you wish to use this project in a proprietary commercial endeavor, you must obtain a separate license. For further details on this process, please contact me directly.
+## Citation
 
-For my protection, it is important to note that all projects are available on an "As Is" basis, without any warranties or conditions of any kind, either explicit or implied. However, do not hesitate to report issues on the repository's project, or make a Pull Request to solve it :smile: 
-
-### Citation
-
-If you find this project useful in your work, please add this citation to give it more visibility ! :yum:
+If you find this project useful in your work, please add this citation to give it more visibility! :yum:
 
 ```
 @misc{yui-mhcp
@@ -112,11 +152,3 @@ If you find this project useful in your work, please add this citation to give i
     howpublished    = {\url{https://github.com/yui-mhcp}}
 }
 ```
-
-## Notes and references 
-
-Tutorials :
-- [tensorflow's tutorials](https://tensorflow.org/tutorials) : list of tensorflow's tutorials covering multiple topics. Some of the proposed projects / features are inspired from these tutorials (such as the `tf.data.Dataset` pipeline builder `prepare_dataset`). 
-
-Papers :
-- [Attention is all you need](https://papers.nips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) : original paper introducing the `WarmupScheduler` and `Transformer` architecture. 
