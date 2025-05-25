@@ -10,7 +10,7 @@ Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.m
 ├── architectures            : utilities for model architectures
 │   ├── layers                   : custom layer implementations
 │   ├── transformers             : transformer architecture implementations
-│   │   ├── {...}_arch.py            : concrete transformer models built upon generic transformer blocks
+│   │   ├── *_arch.py                : concrete transformer models built upon generic transformer blocks
 │   │   ├── text_transformer_arch.py : defines the main Transformers blocks
 │   │   └── transformer_arch.py      : defines features for text-based Transformers
 │   ├── current_blocks.py        : defines common blocks (e.g., Conv + BN + ReLU)
@@ -51,7 +51,7 @@ Check the [CHANGELOG](https://github.com/yui-mhcp/yui-mhcp/blob/main/CHANGELOG.m
 
 \* Check [the data processing repository](https://github.com/yui-mhcp/data_processing) for more information on these modules.
 
-All projects also contain a `README.md` file, that provides general information on the project features/usage, some links (tutorials/projects) related to the topic, and some `example_*.ipynb` notebooks for practical usage examples.
+All projects also contain a `README.md` file, that provides general information on the project features/usage and links (tutorials/projects) related to the topic, and some `example_*.ipynb` notebooks for practical usage examples.
 
 ## Installation and usage
 
@@ -70,24 +70,8 @@ Here is a summary of the installation procedure, if you have a working python en
 - [x] Make examples for `BaseModel` subclassing.
 - [x] Comment the code.
 - [ ] Multi-GPU support.
-- [ ] Make tutorials to extend the project
-    - [x] Add new architectures
-    - [x] Add new training objects
-    - [x] Add new datasets
-    - [ ] Add new models' classes
-- [x] Add `Dockerfile` scripts (experimental)
 - [x] Support `keras3`
-    - [x] Migrate the `train` custom features to be handled by the `fit` method
-    - [x] Clean the code
-    - [x] Make a custom `CheckpointManager` to support all backends
-    - [x] Make the `History` and `CheckpointManager` classes compatible with `fit`
-    - [x] Improve the processing pipeline methods
-    - [x] Support all keras losses/optimizers/callbacks/metrics in the `compile` and `fit` methods
-    - [ ] Add the `PredictorCalback` feature
-    - [ ] Convert the available datasets to be compatible with the new `utils/datasets` module
-    - [ ] Make the `evaluate` method compatible with the processing pipeline/`History` class etc.
 - [ ] Make clear tutorials to extend the base project (e.g., add new architectures/layers/losses/...)
-- [ ] Add more references to start learning ML/DL
 
 ## Tutorials and Learning Resources
 
