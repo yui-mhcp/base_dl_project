@@ -13,7 +13,7 @@ import os
 import numpy as np
 
 from utils.keras import ops
-from utils.distances import knn
+from utils.distances import distance
 from .vector_index import VectorIndex
 
 class NumpyIndex(VectorIndex):
@@ -33,6 +33,9 @@ class NumpyIndex(VectorIndex):
         vectors = ops.convert_to_numpy(vectors)
         if len(vectors.shape) == 1: vectors = vectors[None]
         
+        if self.metric == 'cosine':
+            vectors = ops.normalize(vectors)
+
         if self.vectors is None:
             self.vectors = vectors
         else:
@@ -44,7 +47,7 @@ class NumpyIndex(VectorIndex):
         if isinstance(index, int): index = [index]
         self.vectors = self.vectors[~np.isin(np.arange(len(self)), index)]
 
-    def top_k(self, query, k = 10, *, run_eagerly = True, ** kwargs):
+    def top_k(self, query, k = 10, ** kwargs):
         """
             Returns a tuple `(top_k_indices, top_k_scores)`
             
@@ -55,11 +58,18 @@ class NumpyIndex(VectorIndex):
                 - indices   : a 2-D `Tensor` of shape `(n_queries, k)`, the indexes of nearest data
                 - scores    : a 2-D `Tensor` of shape `(n_queries, k)`, the scores of the nearest data
         """
-        indices, scores = knn(
-            query, self.vectors, distance_metric = self.metric, k = k,
-            run_eagerly = run_eagerly, return_scores = True, ** kwargs
+        query = ops.convert_to_numpy(query)
+        if self.metric == 'cosine':
+            metric = 'dp'
+            query  = ops.normalize(query)
+        else:
+            metric = self.metric
+            
+        distance_matrix = distance(
+            query, self.vectors, metric, as_matrix = True, mode = 'similarity'
         )
-        return ops.convert_to_numpy(indices), ops.convert_to_numpy(scores)
+        dists, indices = ops.top_k(distance_matrix, k)
+        return indices, dists
 
     def load_vectors(self, filename):
         """ Load the index from `filename` """
