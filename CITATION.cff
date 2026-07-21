@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this project in your work, please cite it as below."
+title: "base_dl_project: a minimal deep-learning project template built on the BaseModel interface"
+abstract: >-
+  Minimal deep-learning project template built around the `BaseModel` interface
+  (preprocessing + architecture + postprocessing), with checkpointing, a training
+  loop and keras-free runtimes — part of the yui-mhcp projects.
+authors:
+  - name: "yui"
+    email: "yui-mhcp@tutanota.com"
+type: software
+version: 1.0.0
+date-released: 2026-07-21
+license: AGPL-3.0-or-later
+url: "https://github.com/yui-mhcp"
+repository-code: "https://github.com/yui-mhcp/base_dl_project"
+keywords:
+  - deep-learning
+  - keras
+  - tensorflow
+  - pytorch
+  - tensorrt
+  - base-model
+  - training

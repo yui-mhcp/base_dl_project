@@ -13,7 +13,7 @@ import os
 import math
 import numpy as np
 
-from ..interfaces import BaseModel
+from ..core import BaseModel
 from utils.keras import TensorSpec, ops
 from utils import plot_multiple, plot_embedding
 from utils.image import display_image, build_gif, load_image
@@ -56,9 +56,13 @@ class MNISTClassifier(BaseModel):
         super().build(model = model)
         
     @property
+    def input_signature(self):
+        return TensorSpec(shape = (None, ) + self.input_size, dtype = self.base_dtype)
+
+    @property
     def output_signature(self):
         return TensorSpec(shape = (None,), dtype = 'int32')
-    
+
     @property
     def encoder(self):
         import keras
@@ -104,4 +108,3 @@ class MNISTClassifier(BaseModel):
             'input_size'    : self.input_size
         })
         return config
-        
